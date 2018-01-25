@@ -1380,7 +1380,7 @@ def bicorr_plot(bicorr_hist_plot, dt_bin_edges, title = None,
     """
     plt.figure(figsize=[4,4])
     plt.pcolormesh(dt_bin_edges, dt_bin_edges, bicorr_hist_plot.T, norm=matplotlib.colors.LogNorm(), vmin = vmin, vmax = vmax, cmap="jet")
-    plt.colorbar()
+    cbar = plt.colorbar(fraction = 0.043, pad=0.1)
     plt.xlabel('$\Delta t_1$ (ns)')
     plt.ylabel('$\Delta t_2$ (ns)')
     if title is not None: plt.title(title)
