@@ -29,7 +29,7 @@ import time
 from tqdm import *
 
 ############### SOME GENERAL FUNCTIONS TO KEEP AROUND ########################
-def save_fig_to_folder(fig_filename,fig_folder='fig'):
+def save_fig_to_folder(fig_filename,fig_folder='fig',extensions=['png']):
     """
     Summary: Save .png of current matplotlib plot to fig_folder / fig_filename
     Code will check to make sure fig_folder exists. If not, create folder then save .png to folder
@@ -40,11 +40,15 @@ def save_fig_to_folder(fig_filename,fig_folder='fig'):
         Filename to use for saving the figure
     fig_folder : str, optional
         Folder where to save the image, relative to cwd
+    extensions: str, optional
+        File save format. If several, produce all.
 
     Returns
     -------
     n/a
     """
+    # Don't cut off labels
+    plt.tight_layout()
     # If saving to same folder
     if fig_folder is None:
         plt.savefig(fig_filename)
@@ -54,7 +58,8 @@ def save_fig_to_folder(fig_filename,fig_folder='fig'):
             os.stat(fig_folder)
         except:
             os.mkdir(fig_folder)
-        plt.savefig(fig_folder+'/'+fig_filename) 
+        for extension in extensions:
+            plt.savefig(fig_folder+'/'+fig_filename+'.'+extension) 
 
 ############### SET UP SYSTEM INFORMATION ####################################      
 def build_ch_lists(print_flag = False):
@@ -1373,11 +1378,13 @@ def bicorr_plot(bicorr_hist_plot, dt_bin_edges, title = None,
     -------
     none
     """
+    plt.figure(figsize=[4,4])
     plt.pcolormesh(dt_bin_edges, dt_bin_edges, bicorr_hist_plot.T, norm=matplotlib.colors.LogNorm(), vmin = vmin, vmax = vmax, cmap="jet")
     plt.colorbar()
     plt.xlabel('$\Delta t_1$ (ns)')
     plt.ylabel('$\Delta t_2$ (ns)')
     if title is not None: plt.title(title)
+    plt.axes().set_aspect('equal')
     if save_flag:
         save_fig_to_folder(save_filename, save_folder)
     if show_flag:
