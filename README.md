@@ -48,7 +48,7 @@ All of my functions are in the [bicorr.py](scripts/bicorr.py) file, which is ext
 
 ## Parse `cced`, calculate `singles_hist`
 
-[singles_histogram.ipynb](analysis/singles_histogram.ipynb): Here I calculate a histogram of singles count rate events vs. $\Delta t$, the time between the fission chamber event and the corresponding detector interaction. The histogram has the following structure: 
+[singles_histogram.ipynb](methods/singles_histogram.ipynb): Here I calculate a histogram of singles count rate events vs. $\Delta t$, the time between the fission chamber event and the corresponding detector interaction. The histogram has the following structure: 
 
 * Dimension 0: particle type (0=n,1=g)  
 * Dimension 1: detector channel (need to build a dict_det_to_index for this), 45 in length  
@@ -56,7 +56,7 @@ All of my functions are in the [bicorr.py](scripts/bicorr.py) file, which is ext
 
 ## Parse `cced`, produce `bicorr`
 
-[generate_bicorr_from_cced.ipynb](analysis/generate_bicorr_from_cced.ipynb): This notebook identifies bicorrelation events from the `cced` list-mode file of all interactions and generates a `bicorr` file, which is a list-mode log of all bicorrelation events. These two files look like this:
+[generate_bicorr_from_cced.ipynb](methods/generate_bicorr_from_cced.ipynb): This notebook identifies bicorrelation events from the `cced` list-mode file of all interactions and generates a `bicorr` file, which is a list-mode log of all bicorrelation events. These two files look like this:
 
 `cced` file (columns are `event`, `detector`, `particle_type`, `time`, `integral`, `height`):
 
@@ -86,7 +86,7 @@ All of my functions are in the [bicorr.py](scripts/bicorr.py) file, which is ext
 
 ## Parse `bicorr`, produce `bicorr_hist_master`
 
-[build_bicorr_hist_master.ipynb](analysis/build_bicorr_hist_master.ipynb): Produce the two-dimensional bicorrelation histogram, `bicorr_hist_master` of counts vs. $\Delta_1$ vs. $\Delta_2$ from the `bicorr` file. `bicorr_hist_master` has four dimensions:
+[build_bicorr_hist_master.ipynb](methods/build_bicorr_hist_master.ipynb): Produce the two-dimensional bicorrelation histogram, `bicorr_hist_master` of counts vs. $\Delta_1$ vs. $\Delta_2$ from the `bicorr` file. `bicorr_hist_master` has four dimensions:
 
 * 0: 990 in length: detector pair index (from `det_df`)  
 * 1: 4 in length: interaction type (0=nn, 1=np, 2=pn, 3=pp)  
@@ -104,7 +104,7 @@ To run:
     * Run for folders `1` to `5`: `bicorr_hist_master = bicorr.build_bhm(det_df, 1, 6, dt_bin_edges = dt_bin_edges)[0]`
 * If `save_flag = True`, will store a sparse matrix version to disk as explained in next section
 
-[implement_sparse_matrix.ipynb](analysis/implement_sparse_matrix.ipynb): Convert `bicorr_hist_master` from a numpy array to a sparse matrix, in which I only store the indices and values of each nonzero element. This cuts down the file size from 1 GB to 30 MB for 1 ns time binning and from 15 GB to 0.5 GB for 0.25 ns time binning.
+[implement_sparse_matrix.ipynb](methods/implement_sparse_matrix.ipynb): Convert `bicorr_hist_master` from a numpy array to a sparse matrix, in which I only store the indices and values of each nonzero element. This cuts down the file size from 1 GB to 30 MB for 1 ns time binning and from 15 GB to 0.5 GB for 0.25 ns time binning.
 
 * Store `bicorr_hist_master` as a sparse matrix `sparse_bhm`: `sparse_bhm = bicorr.generate_sparse_bhm(bicorr_hist_master)`
 * Save `sparse_bhm` to file: `bicorr.save_sparse_bhm(sparse_bhm, det_df, dt_bin_edges, 'sparse_folder')`
@@ -113,19 +113,19 @@ To run:
 
 ## Visualize, animate `bicorr_hist_master`
 
-[plot_bicorr_hist.ipynb](analysis/plot_bicorr_hist.ipynb): Plot the two-dimensional histogram which we call a "bicorrelation plot." This is a histogram of the time of flight to detectors A and B, `Delta t_A` and `Delta t_B`. The following `.gif` shows the bicorrelation plot vs. angle between detectors.
+[plot_bicorr_hist.ipynb](methods/plot_bicorr_hist.ipynb): Plot the two-dimensional histogram which we call a "bicorrelation plot." This is a histogram of the time of flight to detectors A and B, `Delta t_A` and `Delta t_B`. The following `.gif` shows the bicorrelation plot vs. angle between detectors.
 
-![analysis/fig/all.gif](analysis/fig/all.gif)
+![methods/fig/all.gif](methods/fig/all.gif)
 
-[build_det_df_angles_pairs.ipynb](analysis/build_det_df_angles_pairs.ipynb): Build, store, reload the `pandas` dataframe that organizes detector channel number and stores angle for each pair. Indices correspond to `bicorr_hist_master`. `.csv` of dataframe: [det_df_pairs_angles.csv](analysis/det_df_pairs_angles.csv).
+[build_det_df_angles_pairs.ipynb](methods/build_det_df_angles_pairs.ipynb): Build, store, reload the `pandas` dataframe that organizes detector channel number and stores angle for each pair. Indices correspond to `bicorr_hist_master`. `.csv` of dataframe: [det_df_pairs_angles.csv](analysis/det_df_pairs_angles.csv).
 
-[detector_pair_angles.ipynb](analysis/detector_pair_angles.ipynb): Explore the distribution of angles between detector pairs and produce a function that selects detector pairs within a given angle range. The angles between detector pairs are shown here:
+[detector_pair_angles.ipynb](methods/detector_pair_angles.ipynb): Explore the distribution of angles between detector pairs and produce a function that selects detector pairs within a given angle range. The angles between detector pairs are shown here:
 
 ![fig/angle_btw_pairs.png](fig/angle_btw_pairs.png)
 
-[coarsen_time_and_normalization.ipynb](analysis/coarsen_time_and_normalization.ipynb): Coarsen the time binning for bins wider than the default 0.25 ns, and normalize the number of counts in the bicorrelation plot to the number of fissions, the number of detector pairs, and the time bin width. The following two bicorrelation plots compare normalized distributions with 0.25 and 4 ns bin widths. 
+[coarsen_time_and_normalization.ipynb](methods/coarsen_time_and_normalization.ipynb): Coarsen the time binning for bins wider than the default 0.25 ns, and normalize the number of counts in the bicorrelation plot to the number of fissions, the number of detector pairs, and the time bin width. The following two bicorrelation plots compare normalized distributions with 0.25 and 4 ns bin widths. 
 
-![analysis/fig/compare_coarse_normd.png](analysis/fig/compare_coarse_normd.png)
+![methods/fig/compare_coarse_normd.png](methods/fig/compare_coarse_normd.png)
 
 
 
