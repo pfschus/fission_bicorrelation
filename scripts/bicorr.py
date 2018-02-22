@@ -92,6 +92,48 @@ def step_plot(edges,y, linewidth=.5, color='k'):
     for i in range(len(y)-1):
         plt.vlines(edges[i+1],y[i],y[i+1],linewidth=linewidth,color=color)
 
+def calc_histogram_mean(bin_edges, counts, print_flag = False):
+    """
+    Calculate mean of a count rate distribution, counts vs. x. 
+    Errors are calculated under the assumption that you are working
+        with counting statistics. (C_err = sqrt(C) in each bin)
+    
+    Parameters
+    ----------
+    bin_edges : ndarray
+        Bin edges for x
+    counts : ndarray
+        Bin counts
+    print_flag : bool
+        Option to print intermediate values
+    
+    Returns
+    -------
+    x_mean : float
+    x_mean_err : float
+    """
+    bin_centers = centers(bin_edges)
+    
+    num = np.sum(np.multiply(bin_centers,counts))  
+    num_err = np.sqrt(np.sum(np.multiply(bin_centers**2,counts)))
+    denom = np.sum(counts)    
+    denom_err = np.sqrt(denom)    
+
+    if print_flag:
+        print('num: ',num)
+        print('num_err: ',num_err)
+        print('denom: ',denom)
+        print('denom_err: ',denom_err)
+    
+    x_mean = num/denom
+    x_mean_err = x_mean * np.sqrt((num_err/num)**2+(denom_err/denom)**2)
+    
+    if print_flag:
+        print('x_mean: ',x_mean)
+        print('x_mean_err:',x_mean_err)
+    
+    return x_mean, x_mean_err
+
 ############### SET UP SYSTEM INFORMATION ####################################      
 def build_ch_lists(print_flag = False):
     """
@@ -1620,6 +1662,8 @@ def plot_bhp_slice(bhp_slice, dt_bin_edges, normalized = None,
     if save_flag: save_fig_to_folder(save_filename, save_folder, extensions)
     if show_flag: plt.show()
     if clear: plt.clf()
+
+
     
     
 def convert_energy_to_time(energy, distance = 1):
