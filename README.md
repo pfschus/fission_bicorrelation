@@ -117,7 +117,7 @@ To run:
 
 ![methods/fig/all.gif](methods/fig/all.gif)
 
-[build_det_df_angles_pairs.ipynb](methods/build_det_df_angles_pairs.ipynb): Build, store, reload the `pandas` dataframe that organizes detector channel number and stores angle for each pair. Indices correspond to `bicorr_hist_master`. `.csv` of dataframe: [det_df_pairs_angles.csv](analysis/det_df_pairs_angles.csv).
+[build_det_df_angles_pairs.ipynb](methods/build_det_df_angles_pairs.ipynb): Build, store, reload the `pandas` dataframe that organizes detector channel number and stores angle for each pair. Indices correspond to `bicorr_hist_master`. `.csv` of dataframe: [det_df_pairs_angles.csv](meas_info/det_df_pairs_angles.csv).
 
 [detector_pair_angles.ipynb](methods/detector_pair_angles.ipynb): Explore the distribution of angles between detector pairs and produce a function that selects detector pairs within a given angle range. The angles between detector pairs are shown here:
 
