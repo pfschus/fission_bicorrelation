@@ -2,11 +2,6 @@
 Read cced and produce bicorr, plots (DNNG FNPC project)
 PFS, Nov 2016
 
-This module contains numerous functions for the bicorr analysis:
-  generate_bicorr: generate bicorr file from cced file
-  build_bhm: 
-  load_bicorr_hist_master:
-
 Instructions: Can be called from command line or run interactively
   Command line: `python bicorr.py` or `python bicorr.py folder_start folder_end`
   Interactive python session: `import bicorr.py`, then `generate` or `generate(folder_start,folder_end)`
@@ -19,7 +14,6 @@ Changelog:
 2017_06_07 major changes to use det_df instead of dicts
 """
 
-# Import packages- same ones Matthew used in crossCorr_v4.py
 import os
 import os.path
 import time
@@ -208,6 +202,7 @@ def build_singles_hist(cced_filename, cced_path, plot_flag = True, fig_folder = 
     # Load cced file
     ccedType = np.dtype([('event', np.int32), ('detector', np.int8), ('particle_type', np.int8), ('time', np.float16), ('integral', np.float32), ('height', np.float32)])
     data = np.genfromtxt(os.path.join(cced_path,cced_filename),dtype=ccedType)
+    print('Loading data from: ',os.path.join(cced_path,cced_filename) )
     
     # Fill histogram
     print_flag = False # Make input parameter?
@@ -697,19 +692,19 @@ def fill_bhm(bicorr_hist_master, bicorr_data, det_df, dt_bin_edges, disable_tqdm
     
     
 
-def build_bhm(det_df = None, folder_start=1,folder_end=2, dt_bin_edges = None, checkpoint_flag = True, save_flag = True, sparse_filename = 'sparse_bhm', root_path = None, disable_tqdm = False, print_flag = True):
+def build_bhm(folder_start=1,folder_end=2, det_df = None, dt_bin_edges = None, checkpoint_flag = True, save_flag = True, sparse_filename = 'sparse_bhm', root_path = None, disable_tqdm = False, print_flag = True):
     """
     Load bicorr_data from folder's bicorr# file and fill histogram. Loop through folders specified by `folder_start` and `folder_end`. Built for dt_bin_edges generated using default settings in bicorr.build_dt_bin_edges().
     
     Parameters
     ----------
-    det_df : pandas dataFrame, optional
-        dataFrame of detector pair indices and angles   
-        Default is to look for the file in '../meas_info/det_df_pairs_angles.csv'
     folder_start : int, optional
         First folder
     folder_end : int, optional
         Last folder + 1 (for example, folder_end = 2 will end at folder 1)
+    det_df : pandas dataFrame, optional
+        dataFrame of detector pair indices and angles   
+        Default is to look for the file in '../meas_info/det_df_pairs_angles.csv'
     dt_bin_edges : ndarray, optional
         Edges of time bin array in ns
         If None, use default settings from build_dt_bin_edges()
@@ -736,9 +731,9 @@ def build_bhm(det_df = None, folder_start=1,folder_end=2, dt_bin_edges = None, c
         Dimension 3: dt bin for detector 2
     dt_bin_edges : ndarray
         One-dimensional array of time bin edges
-    """
+    """    
     # Load det_df if not provided
-    if det_df is None: det_df = load_det_df()    
+    if det_df is None: det_df = load_det_df()
     
     # If no data path provided, look for data folders here
     if root_path is None: root_path = os.getcwd()
@@ -775,7 +770,7 @@ def build_bhm(det_df = None, folder_start=1,folder_end=2, dt_bin_edges = None, c
         if print_flag: print('Generating sparse matrix')
         sparse_bhm = generate_sparse_bhm(bhm,disable_tqdm = disable_tqdm)        
         if print_flag: print('Saving sparse matrix data to .npz file')
-        save_sparse_bhm(sparse_bhm, det_df,dt_bin_edges, save_folder = root_path, sparse_filename = sparse_filename)
+        save_sparse_bhm(sparse_bhm, dt_bin_edges, save_folder = root_path, sparse_filename = sparse_filename)
         
     if print_flag: print('Bicorr hist master bhm build complete')
                 
@@ -930,7 +925,7 @@ def generate_sparse_bhm(bicorr_hist_master, disable_tqdm = False):
     
     return sparse_bhm
     
-def save_sparse_bhm(sparse_bhm, dt_bin_edges, save_folder = None, sparse_filename = 'sparse_bhm'):
+def save_sparse_bhm(sparse_bhm, dt_bin_edges, save_folder = None, sparse_filename = 'sparse_bhm', note = 'note'):
     """
     Save sparse_bhm, and dt_bin_edges to .npz file in local folder. (Reload using load_sparse_bhm function)
     
@@ -949,20 +944,20 @@ def save_sparse_bhm(sparse_bhm, dt_bin_edges, save_folder = None, sparse_filenam
         Optional destination folder. If None, then save in current working directory
     sparse_filename : str, optional
         Filename to save sparse_bhm to
+    note : str, optional
+        Note to include in sparse_bhm.npz
     """
-    if save_folder is None:
-        filename = 'sparse_bhm'
-    else:
+    if save_folder is not None:
         # check if save_folder exists
         try:
             os.stat(save_folder)
         except:
             os.mkdir(save_folder)
-        filename = os.path.join(save_folder, sparse_filename)    
+        sparse_filename = os.path.join(save_folder, sparse_filename)    
     
-    np.savez(filename, dt_bin_edges = dt_bin_edges, sparse_bhm=sparse_bhm)
+    np.savez(sparse_filename, dt_bin_edges = dt_bin_edges, sparse_bhm=sparse_bhm, note = note)
     
-def load_sparse_bhm(filepath=None):
+def load_sparse_bhm(filepath=None,filename=None):
     """
     Load .npz file containing `sparse_bhm`, `dict_pair_to_index`, and `dt_bin_edges`. This file was probably generated by the function `save_sparse_bhm`.
     
@@ -970,7 +965,9 @@ def load_sparse_bhm(filepath=None):
     ----------    
     filepath : str, optional
         Where is the `sparse_bhm.npz` file located? If = None, look for it in the current working directory
-        
+    filename : str, optional
+        What is the name of the sparse_bhm file, if not sparse_bhm.npz?    
+    
     Returns
     -------
     sparse_bhm : ndarray
@@ -982,19 +979,28 @@ def load_sparse_bhm(filepath=None):
                 ('count', np.uint32)]) Number of counts 
     dt_bin_edges : ndarray
         Edges of time bin array in ns    
+    note : str
+        Note about sparse_bhm file
     """
+    if filename is None:
+        filename = 'sparse_bhm.npz'
+    
     if filepath is None:
-        npzfile = np.load('sparse_bhm.npz')
+        npzfile = np.load(filename)
     else:
-        npzfile = np.load(filepath+r'\sparse_bhm.npz')    
+        npzfile = np.load(os.path.join(filepath,filename))    
    
     sparse_bhm = npzfile['sparse_bhm']
-    dt_bin_edges       = npzfile['dt_bin_edges']    
+    dt_bin_edges = npzfile['dt_bin_edges']  
+    if 'note' in npzfile:
+        note = npzfile['note']
+    else:
+        note = 'note'
     
     
-    return sparse_bhm, dt_bin_edges
+    return sparse_bhm, dt_bin_edges, note
     
-def revive_sparse_bhm(sparse_bhm, det_df, dt_bin_edges):
+def revive_sparse_bhm(sparse_bhm, det_df, dt_bin_edges, bicorr_hist_master = None):
     """
     Revive sparse_bhm and generate full-sized bicorr_hist_master
     
@@ -1010,7 +1016,13 @@ def revive_sparse_bhm(sparse_bhm, det_df, dt_bin_edges):
     det_df : pandas dataFrame
         dataFrame of detector pair indices and angles
     dt_bin_edges : ndarray
-        Edges of time bin array in ns    
+        Edges of time bin array in ns   
+    bicorr_hist_master : ndarray, optional
+        2d bicorrelation histogram
+        Dimension 0: detector pair, use dictionary `dict_pair_to_index`  
+        Dimension 1: interaction type, length 4. (0=nn, 1=np, 2=pn, 3=pp)  
+        Dimension 2: dt bin for detector 1
+        Dimension 3: dt bin for detector 2      
     
     Returns
     -------
@@ -1021,10 +1033,12 @@ def revive_sparse_bhm(sparse_bhm, det_df, dt_bin_edges):
         Dimension 2: dt bin for detector 1
         Dimension 3: dt bin for detector 2
     """
-    bicorr_hist_master = alloc_bhm(len(det_df),4,len(dt_bin_edges)-1)
+    # If no bicorr_hist_master provided, fill a new one
+    if bicorr_hist_master is None:
+        bicorr_hist_master = alloc_bhm(len(det_df),4,len(dt_bin_edges)-1)
     
     for i in np.arange(0,sparse_bhm.size):
-        bicorr_hist_master[sparse_bhm[i][0],sparse_bhm[i][1],sparse_bhm[i][2],sparse_bhm[i][3]] = sparse_bhm[i][4]    
+        bicorr_hist_master[sparse_bhm[i][0],sparse_bhm[i][1],sparse_bhm[i][2],sparse_bhm[i][3]] += sparse_bhm[i][4]    
     
     return bicorr_hist_master
     
@@ -1056,8 +1070,7 @@ def load_det_df(filepath=r'../meas_info/det_df_pairs_angles.csv', plot_flag = Fa
         det_df = pd.read_pickle(filepath)
     else:
         print('ERROR: File type not recognized')
-        det_df = 'none'
-        
+        det_df = 'none'    
     if plot_flag: plot_det_df(det_df, show_flag = True)
     
     return det_df
@@ -1406,7 +1419,7 @@ def calc_nn_sum(bicorr_hist_plot, dt_bin_edges, emin = 0.62, emax = 12):
     
     
 ####### MAIN ###########################
-def main(folder_start = 1,folder_end = 2, option = [1]):
+def main(folder_start = 1,folder_end = 2, option = [1,2]):
     """
     NOTE: For now only build bicorr#, don't build bicorr_hist_master
     
@@ -1416,10 +1429,13 @@ def main(folder_start = 1,folder_end = 2, option = [1]):
     
     Syntax: "python bicorr.py" OR "python bicorr.py folder_start folder_end"
     Default is to only run folder 1   
+
+
     
     Parameters
     ----------
     folder_start : int, optional
+
         Folder to start with
     folder_end : int, optional
         Folder to end at (don't run this one)
@@ -1429,42 +1445,61 @@ def main(folder_start = 1,folder_end = 2, option = [1]):
     Returns
     -------
     n/a
-    """
+    """    
     if 1 in option:
-        # Generate bicorr from cced files
+        print('********* Generate bicorr from cced files *********')
         generate_bicorr(folder_start,folder_end)
     if 2 in option:
-        # Process bicorr files and build bhm
-        # Pos time range
+        print('********* Build bhm: Positive time range **********')
         build_bhm(folder_start,folder_end,dt_bin_edges = np.arange(0.0,200.25,0.25))
-        # Neg time range
+        print('********* Build bhm: Negative time range **********')
         build_bhm(folder_start,folder_end,dt_bin_edges = np.arange(-200.0,0.25,0.25),sparse_filename = 'sparse_bhm_neg')
+    if 3 in option:
+        print('********* Build singles_hist **************')
+        generate_singles_hist(folder_start,folder_end)
         
 if __name__ == "__main__":
     """
     Calls main()
+    
+    Parameters
+    ----------
+    folder_start : int, optional
+        Folder to start with
+    folder_end : int, optional
+        Folder to end at (don't run this one)
+    option_code : int, optional
+        Which options to include? Write all as one integer. Ex: option = [1,2] corresponds to option_code = 12
+        1: generate_bicorr
+        2: build_bhm pos and neg, store sparse_bhm
+        3: generate_singles_hist, store singles_hist.npz
+        Default: Run everything
+    
 	"""
-    print(len(sys.argv))
+    # print(len(sys.argv))
     
     if len(sys.argv) == 3:
         folder_start = int(sys.argv[1])
         folder_end   = int(sys.argv[2])
+
+        option = [1,2,3]
         
         print('folder_start = ', folder_start)
         print('folder_end = ', folder_end)
         
-        main(folder_start,folder_end)
+        main(folder_start,folder_end,option)
         
     elif len(sys.argv) == 4:
         folder_start = int(sys.argv[1])
         folder_end   = int(sys.argv[2])
-        option       = int(sys.argv[3])
+        option_code  = int(sys.argv[3]); option = [int(i) for i in str(option_code)]
         
         print('folder_start = ', folder_start)
         print('folder_end = ', folder_end)
+        print('option = ', option)
         
         main(folder_start,folder_end,option)    
         
     else:
-        print('In else loop')
+
         main()
