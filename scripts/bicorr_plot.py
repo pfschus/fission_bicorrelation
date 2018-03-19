@@ -210,6 +210,8 @@ def Sd_vs_angle_all(singles_df, show_flag = True, save_flag = True,
     if save_flag: save_fig_to_folder('Sd_vs_angle_raw',fig_folder,extensions=['png','pdf'])
     if show_flag: plt.show()
     plt.clf()
+    
+    
             
             
 ################## BHP ##########################
@@ -336,7 +338,33 @@ def counts_vs_angle_all(det_df, show_flag = True, save_flag = True,
         if show_flag: plt.show()
         plt.clf()  
         
-        
+def W_vs_angle_all(det_df, show_flag = True, save_flag = True, 
+                    fig_folder = 'fig', normalized = False):
+    """
+    Generate plots of counts vs. angle for all pairs separately
+    
+    Parameters
+    ----------
+    det_df : pandas dataFrame
+        detector pair dataframe with counts already entered, W calculated
+    normalized : bool, optional
+        option to plot normalized columns
+    
+    Returns
+    -------
+    n/a
+    """
+    # Positive counts vs. angle
+    plt.figure(figsize=(4,3))
+    plt.errorbar(det_df['angle'],det_df['W'],yerr=det_df['W_err'],
+                 fmt='.',markersize=5,elinewidth=.5)
+    plt.xlabel('Angle (degrees)')
+    plt.ylabel('W (weighted counts)')
+    plt.title('weighted $nn$ sum')
+    sns.despine(right=False)
+    if save_flag: save_fig_to_folder('W_vs_angle',fig_folder,extensions=['png','pdf'])
+    if show_flag: plt.show()
+    plt.clf()    
         
 ######################### SLICES ############################
 def plot_bhp_slice(bhp_slice, dt_bin_edges, normalized = None,

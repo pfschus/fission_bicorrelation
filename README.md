@@ -127,6 +127,21 @@ To run:
 
 ![methods/fig/compare_coarse_normd.png](methods/fig/compare_coarse_normd.png)
 
+## Calculate sum across singles histogram
+
+[singles_n_sum.ipynb](methods/singles_n_syn.ipynb): Calculate the sum across the singles time-of-flight distribution, $S_i$, for use in the singles correction. Include background subtraction based on counts in negative time range. Store count rates in a dataFrame called `singles_df`. 
+
+The background-subtracted singles count rate will vary slightly across detectors based on a few systematic effects, including distance from fission chamber and non-uniform attenuation of the fission chamber. 
+
+![methods/fig/Sd_vs_angle_raw.png](methods/fig/Sd_vs_angle_raw.png)
+
+## Calculate sum across bicorrelation histogram
+
+[nn_sum_and_br_subtraction.ipynb](methods/nn_sum_and_br_subtraction.ipynb): Calculate the number of neutron events in a given time or energy range on the bicorrelation distribution, including a background subtraction based on negative time regions. 
+
+[singles_correction.ipynb](methods/singles_correction.ipynb): Correct for a few systematic effects by dividing each doubles count rate by the product of each detector's singles count rate. 
+
+![methods/fig/Cd_to_W.png](methods/fig/Cd_to_W.png)
 
 
 
