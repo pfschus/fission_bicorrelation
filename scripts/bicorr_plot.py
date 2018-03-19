@@ -26,6 +26,11 @@ from tqdm import *
 
 from bicorr import *
 
+
+def test_function():
+    pass
+
+
 ############### SOME GENERAL FUNCTIONS TO KEEP AROUND ########################
 def save_fig_to_folder(fig_filename,fig_folder='fig',extensions=['png']):
     """
@@ -167,7 +172,7 @@ def plot_singles_hist(singles_hist,dt_bin_edges,
     n/a
     """
     plt.figure(figsize=(4,3))
-    dt_bin_centers = calc_centers(dt_bin_edges)
+    dt_bin_centers = (dt_bin_edges[:-1]+dt_bin_edges[1:])/2
     plt.plot(dt_bin_centers,np.sum(singles_hist[0,:,:],axis=(0)))
     plt.plot(dt_bin_centers,np.sum(singles_hist[1,:,:],axis=(0)))
     plt.xlabel('Time (ns)')
