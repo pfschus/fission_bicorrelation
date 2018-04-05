@@ -1158,7 +1158,7 @@ def revive_sparse_bhm(sparse_bhm, det_df, dt_bin_edges, bhm = None):
     
 
 ############## DET_DF AND DETECTOR PAIR ANGLES ########################################
-def load_det_df(filepath=r'../meas_info/det_df_pairs_angles.csv', plot_flag = False):
+def load_det_df(filepath=r'../meas_info/det_df_pairs_angles.csv', remove_fc_neighbors = False, plot_flag = False):
     """
     Load pandas dataFrame containing detector pair information and angles. This was created in the notebook `detector_pair_angles`.
     
@@ -1167,6 +1167,8 @@ def load_det_df(filepath=r'../meas_info/det_df_pairs_angles.csv', plot_flag = Fa
     filepath : str, optional
         Path (absolute or relative) to det_df file. May be `det_df.csv` or `det_df.csv`.
         Default location is specific to pfschus folder structure
+    remove_fc_neighbors : bool, optional
+        Option to remove fission chamber neighbors and reset indices
     plot_flag : bool, optional
         Option to produce plots displaying basic structure of det_df
         Plots will be displayed but not stored
@@ -1183,7 +1185,11 @@ def load_det_df(filepath=r'../meas_info/det_df_pairs_angles.csv', plot_flag = Fa
         det_df = pd.read_pickle(filepath)
     else:
         print('ERROR: File type not recognized')
-        det_df = 'none'    
+        det_df = 'none'        
+    
+    if remove_fc_neighbors:
+        pair_is = generate_pair_is(det_df,ignore_fc_neighbors_flag=True)
+        det_df = det_df.loc[pair_is].reset_index().rename(columns={'index':'index_og'}).copy() 
     if plot_flag: plot_det_df(det_df, show_flag = True)
     
     return det_df
@@ -1515,7 +1521,7 @@ def calc_nn_sum_br(bhp_nn_pos, bhp_nn_neg, dt_bin_edges_pos, norm_factor=None, e
     """
     Calculate the number of counts in a given time range after background subtraction.
     
-    Parmeters
+    Parameters
     ---------
     bhp_nn_pos : ndarray
         Positive time range nn bicorr_hist_plot
@@ -1536,25 +1542,31 @@ def calc_nn_sum_br(bhp_nn_pos, bhp_nn_neg, dt_bin_edges_pos, norm_factor=None, e
     
     Returns
     -------
-    nn_sum_br : int or float
+    Cp or Np : int or float
+        Positive counts
+        Normalized if norm_factor provided as input
+    Cn or Nn : int or float
+        Negative counts
+        Normalized if norm_factor provided as input
+    Cd or Nd : int or float
         Background-subtracted counts.
         Normalized if norm_factor provided as input
-    nn_sum_br_err
+    Cd_err or Nd_err
         1-sigma error in background-subtracted counts
         Normalized if norm_factor provided as input
     """
     if norm_factor is None:
-        Cp = calc_nn_sum(bhp_nn_pos, dt_bin_edges_pos)
-        Cn = calc_nn_sum(bhp_nn_neg[::-1,::-1], dt_bin_edges_pos)
+        Cp = calc_nn_sum(bhp_nn_pos, dt_bin_edges_pos, emin, emax)
+        Cn = calc_nn_sum(bhp_nn_neg[::-1,::-1], dt_bin_edges_pos, emin, emax)
         Cd = Cp-Cn
-        err_Cd = np.sqrt(Cp+Cn)        
-        return Cp, Cn, Cd, err_Cd
+        Cd_err = np.sqrt(Cp+Cn)        
+        return Cp, Cn, Cd, Cd_err
     else:
-        Np = calc_nn_sum(bhp_nn_pos, dt_bin_edges_pos)
-        Nn = calc_nn_sum(bhp_nn_neg[::-1,::-1], dt_bin_edges_pos)
+        Np = calc_nn_sum(bhp_nn_pos, dt_bin_edges_pos, emin, emax)
+        Nn = calc_nn_sum(bhp_nn_neg[::-1,::-1], dt_bin_edges_pos, emin, emax)
         Nd = Np-Nn
-        err_Nd = np.sqrt((Np+Nn)/norm_factor)
-        return Np, Nn, Nd, err_Nd
+        Nd_err = np.sqrt((Np+Nn)/norm_factor)
+        return Np, Nn, Nd, Nd_err
         
 def calc_n_sum_br(singles_hist, dt_bin_edges_sh, det_i, emin=0.62, emax=12):
     """
