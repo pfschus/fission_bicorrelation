@@ -32,48 +32,10 @@ import time
 from tqdm import *
 
 from bicorr_plot import * 
+from bicorr_sums import *
+from bicorr_math import *
 
-def calc_histogram_mean(bin_edges, counts, print_flag = False):
-    """
-    Calculate mean of a count rate distribution, counts vs. x. 
-    Errors are calculated under the assumption that you are working
-        with counting statistics. (C_err = sqrt(C) in each bin)
-    
-    Parameters
-    ----------
-    bin_edges : ndarray
-        Bin edges for x
-    counts : ndarray
-        Bin counts
-    print_flag : bool
-        Option to print intermediate values
-    
-    Returns
-    -------
-    x_mean : float
-    x_mean_err : float
-    """
-    bin_centers = calc_centers(bin_edges)
-    
-    num = np.sum(np.multiply(bin_centers,counts))  
-    num_err = np.sqrt(np.sum(np.multiply(bin_centers**2,counts)))
-    denom = np.sum(counts)    
-    denom_err = np.sqrt(denom)    
 
-    if print_flag:
-        print('num: ',num)
-        print('num_err: ',num_err)
-        print('denom: ',denom)
-        print('denom_err: ',denom_err)
-    
-    x_mean = num/denom
-    x_mean_err = x_mean * np.sqrt((num_err/num)**2+(denom_err/denom)**2)
-    
-    if print_flag:
-        print('x_mean: ',x_mean)
-        print('x_mean_err:',x_mean_err)
-    
-    return x_mean, x_mean_err
 
 ############### SET UP SYSTEM INFORMATION ####################################      
 def build_ch_lists(print_flag = False):
@@ -599,25 +561,6 @@ def bicorr_checkpoint_plots(bicorr_data, fig_folder = 'fig', show_flag = False):
     plt.clf()
 
 ########### CONSTRUCT, STORE, LOAD BICORR_HIST_MASTER ############################
-def calc_centers(edges):
-    """
-    Simple method for returning centers from an array of bin edges. Calculates center between each point as difference between containing edges. 
-    Example, plt.plot(bicorr.centers(edges),counts,'.k')
-    Serves as a shortcode to first producing array of bin centers.
-    
-    Parameters
-    ----------
-    edges : ndarray
-        Array of bin edges
-    
-    Returns
-    -------
-    centers : ndarray
-        Array of bin edges
-    """
-    return (edges[:-1]+edges[1:])/2
-
-
 def build_dt_bin_edges(dt_min=-50,dt_max=200,dt_step=0.25,print_flag=False):
     """
     Construct dt_bin_edges for the two-dimensional bicorrelation histograms. 
@@ -1412,6 +1355,10 @@ def slice_bhp(bhp, dt_bin_edges, delta_tj_min, delta_tj_max = None, print_flag =
     -------
     bhp_slice : ndarray
         Slice through bhp at delta_tj_min
+    slice_dt_range : list
+        Two-element list
+        Lower and upper bound of slice time window
+        slice_dt_range[0] = lower time bound, slice_dt_range[1] = upper time bound
     """
     i_tj_min = np.digitize(delta_tj_min,dt_bin_edges)-1
     
@@ -1419,17 +1366,47 @@ def slice_bhp(bhp, dt_bin_edges, delta_tj_min, delta_tj_max = None, print_flag =
         i_tj_max = i_tj_min
     else:
         if delta_tj_max < delta_tj_min:
-            print('ERROR: t_max < t_min')
+            print('ERROR in slice_bhp: t_max < t_min')
         i_tj_max = np.digitize(delta_tj_max,dt_bin_edges)-1
         
     bhp_slice = (np.sum(bhp[i_tj_min:i_tj_max+1,:],axis=0) +
                  np.sum(bhp[:,i_tj_min:i_tj_max+1],axis=1))
     
-    if print_flag:
-        print('Creating slice through bhp for times from {} to {}'.format(dt_bin_edges[i_tj_min],dt_bin_edges[i_tj_max+1]))
-
-    return bhp_slice
+    slice_dt_range = [dt_bin_edges[i_tj_min],dt_bin_edges[i_tj_max+1]]
     
+    if print_flag:
+        print('Creating slice through bhp for times from {} to {}'.format(slice_dt_range[0],slice_dt_range[1]))
+
+    return bhp_slice, slice_dt_range
+
+    
+def slices_bhp(bhp, dt_bin_edges, t_slices):
+    '''
+    Parameters
+    ----------
+    bhp : ndarray
+        Bicorr hist plot. Two-dimensional with axes sizes corresponding to dt_bin_edges x dt_bin_edges.
+    dt_bin_edges : ndarray
+        One-dimensional array of time bin edges
+    t_slices : ndarray
+        Time values at which to calculate bhp_slices
+    
+    Returns
+    -------
+    bhp_slices : ndarray
+        Array of bhp slices. Dimensions: len(t_slices) x len(dt_bin_centers)
+    slice_dt_ranges : ndarray
+        Array of slice_dt_ranges. Dimensions: len(t_slices) x 2 (min, max)
+    '''
+    dt_bin_centers = calc_centers(dt_bin_edges)
+    bhp_slices = np.zeros((len(t_slices),len(dt_bin_centers)))
+    slice_dt_ranges = np.zeros((len(t_slices),2))
+    
+    for t in t_slices:
+        i = t_slices.index(t) # Works as long as t_slices is unique
+        bhp_slices[i,:], slice_dt_ranges[i,:] = slice_bhp(bhp,dt_bin_edges,t)
+    
+    return bhp_slices, slice_dt_ranges
 
     
 def convert_energy_to_time(energy, distance = 1):
@@ -1462,6 +1439,8 @@ def convert_time_to_energy(time, distance = 1):
     '''
     Convert time in ns to energy in MeV for neutrons that travel 1 m. From Matthew's `reldist.m` script. 
     
+    If an array of times, use energy_bin_edges =  np.asarray(np.insert([bicorr.convert_time_to_energy(t) for t in dt_bin_edges[1:]],0,10000))
+    
     Parameters
     ----------
     time : float
@@ -1484,7 +1463,7 @@ def convert_time_to_energy(time, distance = 1):
     
     return energy
     
-def calc_nn_sum(bicorr_hist_plot, dt_bin_edges, emin = 0.62, emax = 12):
+def calc_nn_sum(bicorr_hist_plot, dt_bin_edges, emin = 0.62, emax = 12, return_real_energies_flag = False):
     """
     Calculate the total number of neutron-neutron counts in the bicorrelation plot.
     
@@ -1504,20 +1483,35 @@ def calc_nn_sum(bicorr_hist_plot, dt_bin_edges, emin = 0.62, emax = 12):
     -------
     nn_sum : float
         Number of neutron counts (same units as bicorr_hist_plot)
+    indices : list, optional
+        Indices corresponding to sum
+    energies_real : list, optional
+        Actual energy limits used in calculation (due to discrete binning)
     """
     
     # Find the corresponding lower and upper time boundaries
     tmin = convert_energy_to_time(emax)
     tmax = convert_energy_to_time(emin)
-    
+
+    # Find bins
+    # Energy boundaries are rounded down. Time boundaries are rounded up. 
     i_min = np.min(np.argwhere(tmin < dt_bin_edges))
     i_max = np.min(np.argwhere(tmax < dt_bin_edges))
+    indices = [i_min, i_max]
+    
+    # What are the energy bin limits that correspond to the bins?
+    emin_real = convert_time_to_energy(dt_bin_edges[i_min])
+    emax_real = convert_time_to_energy(dt_bin_edges[i_max])
+    energies_real = [emin_real,emax_real]
     
     nn_sum = np.sum(bicorr_hist_plot[i_min:i_max, i_min:i_max])
     
-    return nn_sum
+    if return_real_energies_flag:    
+        return nn_sum, indices, energies_real
+    else: 
+        return nn_sum
     
-def calc_nn_sum_br(bhp_nn_pos, bhp_nn_neg, dt_bin_edges_pos, norm_factor=None, emin=0.62, emax=12):
+def calc_nn_sum_br(bhp_nn_pos, bhp_nn_neg, dt_bin_edges_pos, norm_factor=None, emin=0.62, emax=12, return_real_energies_flag = False):
     """
     Calculate the number of counts in a given time range after background subtraction.
     
@@ -1554,19 +1548,27 @@ def calc_nn_sum_br(bhp_nn_pos, bhp_nn_neg, dt_bin_edges_pos, norm_factor=None, e
     Cd_err or Nd_err
         1-sigma error in background-subtracted counts
         Normalized if norm_factor provided as input
+    energies_real
+        Actual energy bin limits (due to discrete energy bins)
     """
     if norm_factor is None:
-        Cp = calc_nn_sum(bhp_nn_pos, dt_bin_edges_pos, emin, emax)
-        Cn = calc_nn_sum(bhp_nn_neg[::-1,::-1], dt_bin_edges_pos, emin, emax)
+        Cp, indices, energies_real = calc_nn_sum(bhp_nn_pos, dt_bin_edges_pos, emin, emax, return_real_energies_flag = True)
+        Cn = calc_nn_sum(bhp_nn_neg[::-1,::-1], dt_bin_edges_pos, emin, emax, return_real_energies_flag = True)[0]
         Cd = Cp-Cn
         Cd_err = np.sqrt(Cp+Cn)        
-        return Cp, Cn, Cd, Cd_err
+        if return_real_energies_flag: 
+            return Cp, Cn, Cd, Cd_err, energies_real
+        else: 
+            return Cp, Cn, Cd, Cd_err
     else:
-        Np = calc_nn_sum(bhp_nn_pos, dt_bin_edges_pos, emin, emax)
-        Nn = calc_nn_sum(bhp_nn_neg[::-1,::-1], dt_bin_edges_pos, emin, emax)
+        Np, indices, energies_real = calc_nn_sum(bhp_nn_pos, dt_bin_edges_pos, emin, emax, return_real_energies_flag = True)
+        Nn = calc_nn_sum(bhp_nn_neg[::-1,::-1], dt_bin_edges_pos, emin, emax, return_real_energies_flag = True)[0]
         Nd = Np-Nn
         Nd_err = np.sqrt((Np+Nn)/norm_factor)
-        return Np, Nn, Nd, Nd_err
+        if return_real_energies_flag:
+            return Np, Nn, Nd, Nd_err, energies_real
+        else:
+            return Np, Nn, Nd, Nd_err
         
 def calc_n_sum_br(singles_hist, dt_bin_edges_sh, det_i, emin=0.62, emax=12):
     """

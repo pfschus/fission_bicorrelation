@@ -21,6 +21,7 @@ from tqdm import *
 
 from bicorr import *
 from bicorr_plot import * 
+from bicorr_math import *
 
 # --SINGLES SUMS TO SINGLES_DF ---------------------------------------------
 def init_singles_df(dict_index_to_det):
@@ -97,30 +98,33 @@ def fill_det_df_singles_sums(det_df, singles_df):
         
     return det_df
     
-def fill_det_df_doubles_sums(det_df, bhp_nn_pos, bhp_nn_neg, dt_bin_edges, emin, emax, num_fissions):
+def fill_det_df_doubles_sums(det_df, bhp_nn_pos, bhp_nn_neg, dt_bin_edges, emin, emax, num_fissions, return_real_energies_flag = False):
     '''
     Calculate and fill det_df doubles sums C and N
     '''
     for index in det_df.index.values:
-        Cp, Cn, Cd, err_Cd = calc_nn_sum_br(bhp_nn_pos[index,:,:],
+        Cp, Cn, Cd, err_Cd, energies_real = calc_nn_sum_br(bhp_nn_pos[index,:,:],
                                                    bhp_nn_neg[index,:,:],
                                                    dt_bin_edges,
-                                                   emin=emin, emax=emax)
+                                                   emin=emin, emax=emax, return_real_energies_flag = True)
         det_df.loc[index,'Cp'] = Cp
         det_df.loc[index,'Cn'] = Cn
         det_df.loc[index,'Cd'] = Cd
         det_df.loc[index,'Cd_err'] = err_Cd
-        Np, Nn, Nd, err_Nd = calc_nn_sum_br(bhp_nn_pos[index,:,:],
+        Np, Nn, Nd, err_Nd, energies_real = calc_nn_sum_br(bhp_nn_pos[index,:,:],
                                                    bhp_nn_neg[index,:,:],
                                                    dt_bin_edges,
                                                    emin=emin, emax=emax,
-                                                   norm_factor = num_fissions)
+                                                   norm_factor = num_fissions, return_real_energies_flag = True)
         det_df.loc[index,'Np'] = Np
         det_df.loc[index,'Nn'] = Nn
         det_df.loc[index,'Nd'] = Nd
         det_df.loc[index,'Nd_err'] = err_Nd
 
-    return det_df
+    if return_real_energies_flag:
+        return det_df, energies_real
+    else:
+        return det_df
 
         
 def calc_det_df_W(det_df):
@@ -151,6 +155,7 @@ def condense_det_df_by_angle(det_df,angle_bin_edges, C_flag=False, plot_flag = F
     by_angle_df = pd.DataFrame({'angle_bin_min':angle_bin_edges[:-1],
     'angle_bin_max':angle_bin_edges[1:],'angle_bin_centers':angle_bin_centers})
     by_angle_df['len pair_is'] = np.nan
+    by_angle_df['std_angle'] = np.nan
     by_angle_df['W'] = np.nan
     by_angle_df['W_err'] = np.nan
     by_angle_df['std W'] = np.nan
@@ -163,7 +168,8 @@ def condense_det_df_by_angle(det_df,angle_bin_edges, C_flag=False, plot_flag = F
     for index in np.arange(len(angle_bin_edges)-1):
         pair_is = generate_pair_is(det_df,angle_bin_edges[index],angle_bin_edges[index+1],True)
         if len(pair_is) > 0:
-            by_angle_df.loc[index,'len pair_is'] = len(pair_is)            
+            by_angle_df.loc[index,'len pair_is'] = len(pair_is)  
+            by_angle_df.loc[index,'std_angle'] = np.std(det_df.loc[pair_is,'angle'])
             by_angle_df.loc[index,'W']=    np.sum(det_df.loc[pair_is,'W'])/len(pair_is)
             by_angle_df.loc[index,'W_err']=np.sqrt(np.sum(det_df.loc[pair_is,'W_err']**2))/len(pair_is)
             by_angle_df.loc[index,'std W']=np.std(det_df.loc[pair_is,'W'])  
@@ -171,31 +177,142 @@ def condense_det_df_by_angle(det_df,angle_bin_edges, C_flag=False, plot_flag = F
                 by_angle_df.loc[index,'Cd']=    np.sum(det_df.loc[pair_is,'Cd'])/len(pair_is)
                 by_angle_df.loc[index,'Cd_err']=np.sqrt(np.sum(det_df.loc[pair_is,'Cd_err']**2))/len(pair_is)
                 by_angle_df.loc[index,'std_Cd']=np.std(det_df.loc[pair_is,'Cd'])   
-    if plot_flag:    
-        plt.figure(figsize=(4,3))
-        plt.errorbar(det_df['angle'],det_df['W'],yerr=det_df['W_err'],
-                         fmt='.',color='r',markersize=5,elinewidth=.5, zorder=1)
-        plt.errorbar(by_angle_df['angle_bin_centers'],by_angle_df['W'],yerr=by_angle_df['std W'],fmt='.',color='k',zorder=3)
-        step_plot(angle_bin_edges,by_angle_df['W'],linewidth=1,zorder=2)
-        plt.xlabel('Angle (degrees)')
-        plt.ylabel('W (relative doubles rate)')
-        sns.despine(right=False)
-        if show_flag: plt.show()  
+
         
         
     return by_angle_df
         
+def perform_W_calcs(det_df,
+                    dict_index_to_det, singles_hist, dt_bin_edges_sh,
+                    bhp_nn_pos, bhp_nn_neg, dt_bin_edges,
+                    num_fissions, emin, emax, angle_bin_edges, return_real_energies_flag = False):
+
+    """
+    Perform all operations for calculating W for each detector pair and in each angle bin
+    """
+    singles_df  = fill_singles_df(dict_index_to_det, singles_hist, dt_bin_edges_sh, emin, emax)
+    det_df      = init_det_df_sums(det_df)
+    det_df      = fill_det_df_singles_sums(det_df, singles_df)
+    det_df, energies_real = fill_det_df_doubles_sums(det_df, bhp_nn_pos, bhp_nn_neg, dt_bin_edges, emin, emax, num_fissions, return_real_energies_flag = True)
+    det_df      = calc_det_df_W(det_df)
+    by_angle_df = condense_det_df_by_angle(det_df,angle_bin_edges)
+    
+    if return_real_energies_flag:
+        return singles_df, det_df, by_angle_df, energies_real
+    else:
+        return singles_df, det_df, by_angle_df
+        
+# ------------ ASYM CALCULATIONS -------
+def calc_Asym(by_angle_df, std_flag = True):
+    """
+    Errors propagated from std(W), not W_err
+    
+    if std_flag = True: Propagate errors from std(W)
+    if std_flag = False: Propagate errosr from W_err
+    """
+
+    angle_bin_edges = [by_angle_df.loc[0,'angle_bin_min']]+by_angle_df['angle_bin_max'].values.tolist()
+
+    series_180 = by_angle_df.loc[np.int(np.digitize(180,angle_bin_edges))-1]
+    series_90 = by_angle_df.loc[np.int(np.digitize(90,angle_bin_edges))-1]
+    
+    series_180 = by_angle_df.loc[np.int(np.digitize(180,angle_bin_edges))-1]
+    series_90 = by_angle_df.loc[np.int(np.digitize(90,angle_bin_edges))-1]
+    
+    num = series_180['W']
+    denom = series_90['W']
+    if std_flag:  
+        num_err = series_180['std W']
+        denom_err = series_90['std W']
+    else:
+        num_err = series_180['W_err']
+        denom_err = series_90['W_err']
+    
+    Asym, Asym_err = prop_err_division(num,num_err,denom,denom_err)
+    
+    return Asym, Asym_err
+        
+def calc_Asym_vs_emin(det_df,
+                    dict_index_to_det, singles_hist, dt_bin_edges_sh,
+                    bhp_nn_pos, bhp_nn_neg, dt_bin_edges,
+                    num_fissions, emins, emax, angle_bin_edges,
+                    plot_flag=True, save_flag=True):
+    """
+    Calculate Asym for variable emin values. The input parameter emins is an array of emin values. emax constant.
+    """
+    
         
         
+    # Initialize Asym_df
+    Asym_df = pd.DataFrame(data = {'emin': emins})
+    Asym_df['emax'] = emax
+    Asym_df['emin_real'] = np.nan
+    Asym_df['emax_real'] = np.nan
+    Asym_df['Asym'] = np.nan
+    Asym_df['Asym_err'] = np.nan
+    
+    # Fill Asym_df
+    for index, row in Asym_df.iterrows():    
+        singles_df, det_df, by_angle_df, energies_real = perform_W_calcs(det_df,
+                        dict_index_to_det, singles_hist, dt_bin_edges_sh,
+                        bhp_nn_pos, bhp_nn_neg, dt_bin_edges,
+                        num_fissions, row['emin'], row['emax'], angle_bin_edges,
+                        return_real_energies_flag = True)
+        Asym, Asym_err = calc_Asym(by_angle_df)
+        
+        Asym_df.loc[index,'emin_real'] = energies_real[1]
+        Asym_df.loc[index,'emax_real'] = energies_real[0]
+        Asym_df.loc[index,'Asym'] = Asym
+        Asym_df.loc[index,'Asym_err'] = Asym_err
+        
+    if plot_flag:
+        plt.figure(figsize=(4,3))
+        plt.errorbar(Asym_df['emin'],Asym_df['Asym'],yerr=Asym_df['Asym_err'],fmt='.',color='k')
+        plt.xlabel('$E_{min}$ (MeV)')
+        plt.ylabel('$A_{sym}$')
+        plt.title('Errors from std(W)')
+        sns.despine(right=True)
+        if save_flag: bicorr_plot.save_fig_to_folder('Asym_vs_emin')
+        plt.show()
+        
+    return Asym_df    
+        
+def calc_Asym_vs_ebin(det_df,
+                    dict_index_to_det, singles_hist, dt_bin_edges_sh,
+                    bhp_nn_pos, bhp_nn_neg, dt_bin_edges,
+                    num_fissions, e_bin_edges, angle_bin_edges,
+                    plot_flag=True, save_flag=True):
+    """
+    Calculate Asym for variable emin values. The input parameter ebins is an array of energy values. Each calculation will use emin = ebins[i], emax = ebins[i+1].
+    """
+    
         
         
+    # Initialize Asym_df
+    Asym_df = pd.DataFrame(data = {'emin':e_bin_edges[:-1],'emax':e_bin_edges[1:]})
+    Asym_df['Asym'] = np.nan
+    Asym_df['Asym_err'] = np.nan
+    
+    # Fill Asym_df
+    for index, row in Asym_df.iterrows():    
+        singles_df, det_df, by_angle_df = perform_W_calcs(det_df,
+                        dict_index_to_det, singles_hist, dt_bin_edges_sh,
+                        bhp_nn_pos, bhp_nn_neg, dt_bin_edges,
+                        num_fissions, row['emin'], row['emax'], angle_bin_edges)
+        Asym, Asym_err = calc_Asym(by_angle_df)
         
+        Asym_df.loc[index,'Asym'] = Asym
+        Asym_df.loc[index,'Asym_err'] = Asym_err
         
+    if plot_flag:
+        plt.figure(figsize=(4,3))
+        plt.errorbar(Asym_df['emin_real'],Asym_df['Asym'],yerr=Asym_df['Asym_err'],fmt='.',color='k')
+        plt.xlabel('$E_{min}$ (MeV)')
+        plt.ylabel('$A_{sym}$')
+        plt.title('Errors from std(W)')
+        sns.despine(right=True)
+        if save_flag: bicorr_plot.save_fig_to_folder('Asym_vs_emin')
+        plt.show()
         
-        
-        
-        
-        
-        
-        
+    return Asym_df  
     

@@ -27,10 +27,8 @@ import time
 from tqdm import *
 
 from bicorr import *
-
-
-def test_function():
-    pass
+from bicorr_sums import *
+from bicorr_math import *
 
 
 ############### SOME GENERAL FUNCTIONS TO KEEP AROUND ########################
@@ -262,7 +260,7 @@ def bhp_plot(bicorr_hist_plot, dt_bin_edges, title = None,
     -------
     none
     """
-    plt.figure(figsize=[3,3])
+    plt.figure(figsize=[4,4])
     plt.pcolormesh(dt_bin_edges, dt_bin_edges, bicorr_hist_plot.T, norm=matplotlib.colors.LogNorm(), vmin = vmin, vmax = vmax, cmap="jet")
     cbar = plt.colorbar(fraction = 0.043, pad=0.1)
     if np.max(bicorr_hist_plot) >=1: # absolute counts
@@ -302,7 +300,7 @@ def counts_vs_angle_all(det_df, show_flag = True, save_flag = True,
     # Positive counts vs. angle
     plt.figure(figsize=(4,3))
     plt.errorbar(det_df['angle'],det_df['Cp'],yerr=det_df['Cp']**.5,
-                 fmt='.',markersize=5,elinewidth=.5)
+                 fmt='.',markersize=5,elinewidth=.5,color='k')
     plt.xlabel('Angle (degrees)')
     plt.ylabel('Cp (counts)')
     plt.title('positive $nn$ sum')
@@ -314,7 +312,7 @@ def counts_vs_angle_all(det_df, show_flag = True, save_flag = True,
     # Negative counts vs. angle
     plt.figure(figsize=(4,3))
     plt.errorbar(det_df['angle'],det_df['Cn'],yerr=det_df['Cn']**.5,
-                 fmt='.',markersize=5,elinewidth=.5)
+                 fmt='.',markersize=5,elinewidth=.5,color='k')
     plt.xlabel('Angle (degrees)')
     plt.ylabel('Cn (counts)')
     plt.title('negative $nn$ sum')
@@ -326,7 +324,7 @@ def counts_vs_angle_all(det_df, show_flag = True, save_flag = True,
     # Negative counts vs. angle
     plt.figure(figsize=(4,3))
     plt.errorbar(det_df['angle'],det_df['Cd'],yerr=det_df['Cd_err'],
-                 fmt='.',markersize=5,elinewidth=.5)
+                 fmt='.',markersize=5,elinewidth=.5,color='k')
     plt.xlabel('Angle (degrees)')
     plt.ylabel('Cd (counts)')
     plt.title('br-subtracted $nn$ sum')
@@ -349,17 +347,15 @@ def counts_vs_angle_all(det_df, show_flag = True, save_flag = True,
         if show_flag: plt.show()
         plt.clf()  
         
-def W_vs_angle_all(det_df, show_flag = True, save_flag = True, 
-                    fig_folder = 'fig', normalized = False):
+def W_vs_angle_all(det_df, show_flag = True, save_flag = True, clf_flag = True,
+                    fig_folder = 'fig'):
     """
-    Generate plots of counts vs. angle for all pairs separately
+    Generate plots of W vs. angle for all pairs separately
     
     Parameters
     ----------
     det_df : pandas dataFrame
         detector pair dataframe with counts already entered, W calculated
-    normalized : bool, optional
-        option to plot normalized columns
     
     Returns
     -------
@@ -368,18 +364,62 @@ def W_vs_angle_all(det_df, show_flag = True, save_flag = True,
     # Positive counts vs. angle
     plt.figure(figsize=(4,3))
     plt.errorbar(det_df['angle'],det_df['W'],yerr=det_df['W_err'],
-                 fmt='.',markersize=5,elinewidth=.5)
+                 fmt='.',markersize=5,elinewidth=.5,zorder=1)
     plt.xlabel('Angle (degrees)')
-    plt.ylabel('W (weighted counts)')
-    plt.title('weighted $nn$ sum')
+    plt.ylabel('W (relative doubles counts)')
     sns.despine(right=False)
-    if save_flag: save_fig_to_folder('W_vs_angle',fig_folder,extensions=['png','pdf'])
+    if save_flag: save_fig_to_folder('W_vs_angle_all',fig_folder,extensions=['png','pdf'])
     if show_flag: plt.show()
-    plt.clf()    
+    if clf_flag: plt.clf()    
+    
+def W_vs_angle_binned(by_angle_df, show_flag = True, save_flag = True, clf_flag = True,
+                      fig_folder = 'fig'):
+    """
+    Generate plots of W vs. angle for pairs by bin
+    
+    Parameters
+    ----------
+    by_angle_df : pandas dataFrame
+        Condensed by angle dataframe with W calculated
+    
+    Returns
+    -------
+    n/a
+    """   
+    angle_bin_edges = [by_angle_df.loc[0,'angle_bin_min']]+by_angle_df['angle_bin_max'].values.tolist()
+    
+    plt.figure(figsize=(4,3))
+    plt.errorbar(by_angle_df['angle_bin_centers'],by_angle_df['W'],yerr=by_angle_df['std W'],fmt='.',color='k',zorder=3)
+    step_plot(angle_bin_edges,by_angle_df['W'],linewidth=1,zorder=2)
+    plt.xlabel('Angle (degrees)')
+    plt.ylabel('W (relative doubles counts)')
+    sns.despine(right=False)
+    if save_flag: save_fig_to_folder('W_vs_angle_binned',fig_folder,extensions=['png','pdf'])
+    if show_flag: plt.show()  
+    if clf_flag: plt.clf()
+    
+def W_vs_angle(det_df, by_angle_df, show_flag = True, save_flag = True, clf_flag = True,
+                    fig_folder = 'fig'):
+    """ 
+    Generate plots of W vs. angle for all pairs, overlaid by pairs binned
+    """
+    angle_bin_edges = [by_angle_df.loc[0,'angle_bin_min']]+by_angle_df['angle_bin_max'].values.tolist()
+    
+    plt.figure(figsize=(4,3))
+    plt.errorbar(det_df['angle'],det_df['W'],yerr=det_df['W_err'],fmt='.',color='r', markersize=5,elinewidth=.5,zorder=1)
+    plt.errorbar(by_angle_df['angle_bin_centers'],by_angle_df['W'],yerr=by_angle_df['std W'],fmt='.',color='k',zorder=3)
+    step_plot(angle_bin_edges,by_angle_df['W'],linewidth=1,zorder=2)
+    plt.xlabel('Angle (degrees)')
+    plt.ylabel('W (relative doubles counts)')
+    sns.despine(right=False)
+    if save_flag: save_fig_to_folder('W_vs_angle_all',fig_folder,extensions=['png','pdf'])
+    if show_flag: plt.show()
+    if clf_flag: plt.clf()       
+    
         
 ######################### SLICES ############################
-def plot_bhp_slice(bhp_slice, dt_bin_edges, normalized = None,
-                   title = None, show_flag = False,
+def plot_bhp_slice(bhp_slice, dt_bin_edges, slice_dt_range = None, normalized = None,
+                   title = True, show_flag = False,
                    save_flag = False, save_filename = 'bhp_slice', save_folder = 'fig', new_fig = True, clear = True, msize=5,
                    t_norm_range = None):
     """
@@ -391,12 +431,20 @@ def plot_bhp_slice(bhp_slice, dt_bin_edges, normalized = None,
         Slice through bhp at delta_tj_min, produce with slice_bhp()
     dt_bin_edges : ndarray
         One-dimensional array of time bin edges
-    normalized : str
+    slice_dt_range : array or float, optional
+        Range of dt values over which slice was taken. Primarily used for creating a title or legend
+        if None: not provided
+        if array: Min and max of slice range, ex: [slice_dt_min, slice_dt_max]
+        if float: Slice position, ex: slice_dt_middle
+    normalized : str, optional
         None: Don't normalize
         'int': Normalize by integral
         'max': Normalize by height
-    title : str
+    title : str, optional
         Title for plot. Ex: '$\Delta t_j$ = {}'.format(dt_bin_centers[i])
+        if default True, print according to slice_dt_range
+        if None, no title printed
+        if a str, use custom title
     show_flag : bool
         Option to show figure
     save_flag : bool
@@ -433,22 +481,59 @@ def plot_bhp_slice(bhp_slice, dt_bin_edges, normalized = None,
         imax = len(dt_bin_edges)
     
     if normalized is 'max':   
-        plt.plot(centers(dt_bin_edges),bhp_slice/np.max(bhp_slice[imin:imax]),'.-',markersize=msize,linewidth = 1)
+        plt.plot(calc_centers(dt_bin_edges),bhp_slice/np.max(bhp_slice[imin:imax]),'.-',markersize=msize,linewidth = .5)
         plt.ylabel('Counts normalized by maximum')
     elif normalized is 'int': 
-        plt.plot(centers(dt_bin_edges),bhp_slice/np.sum(bhp_slice[imin:imax]),'.-',markersize=msize,linewidth = 1)
+        plt.plot(calc_centers(dt_bin_edges),bhp_slice/np.sum(bhp_slice[imin:imax]),'.-',markersize=msize,linewidth = .5)
         plt.ylabel('Counts normalized by integral')
     else: 
-        plt.plot(centers(dt_bin_edges),bhp_slice,'.-',markersize=msize,linewidth = 1)
+        plt.plot(calc_centers(dt_bin_edges),bhp_slice,'.-',markersize=msize,linewidth = .5)
         plt.ylabel('Counts')
     plt.xlabel('$\Delta t_i$')
     
-    if title is not None: plt.title(title)
+    if title is True: # Make a title according to slice_dt_range
+        if type(slice_dt_range) is list: # Min and max boundaries
+            plt.title('$\Delta t_j$ = {} to {}'.format(slice_dt_range[0],slice_dt_range[1]))
+        else: # float
+            plt.title('$\Delta t_j$ = {}'.format(slice_dt_range))
+    elif title is not None: # print custom title
+        plt.title(title)
+    
     sns.despine(right=False)
     # plt.axes().set_aspect('equal')
     if save_flag: save_fig_to_folder(save_filename, save_folder, extensions)
     if show_flag: plt.show()
     if clear: plt.clf()
+
+def plot_bhp_slices(bhp_slices,dt_bin_edges,t_slices,slice_dt_ranges):
+    '''
+    Plot bhp_slices on same axes, normalized by integral
+    
+    Parameters
+    ----------
+    bhp_slices : ndarray
+        Array of bhp slices. Dimensions: len(t_slices) x len(dt_bin_centers)    
+    dt_bin_edges : ndarray
+        One-dimensional array of time bin edges
+    slice_dt_ranges : ndarray
+        Array of slice_dt_ranges. Dimensions: len(t_slices) x 2 (min, max)
+    
+    Returns
+    -------
+    n/a
+    '''
+    plt.figure(figsize=(4,3))
+    legend_text = []
+    
+    for t in t_slices:
+        i = t_slices.index(t) # Works as long as t_slices is unique
+        plot_bhp_slice(bhp_slices[i,:],dt_bin_edges,slice_dt_ranges[i,:],normalized='int',clear=False,new_fig=False)
+        legend_text.append('{} to {}'.format(slice_dt_ranges[i,0],slice_dt_ranges[i,1]))
+        
+    plt.legend(legend_text)
+    plt.title('Slices normalized by integral')
+    plt.show()
+        
 
 
     
