@@ -143,6 +143,9 @@ The background-subtracted singles count rate will vary slightly across detectors
 
 ![methods/fig/Cd_to_W.png](methods/fig/Cd_to_W.png)
 
+## Build `bicorr_hist_master` in energy space
+
+[build_bhm_with_energy.ipynb](methods/build_bhm_with_energy.ipynb): Generate a bicorrelation histogram in energy space (for nn events only).
 
 
 
