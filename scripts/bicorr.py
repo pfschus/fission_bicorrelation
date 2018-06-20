@@ -507,60 +507,9 @@ def load_bicorr(folder_number = None, bicorr_path = None, root_path = None):
 
     return bicorr_data
     
-def bicorr_checkpoint_plots(bicorr_data, fig_folder = 'fig', show_flag = False):
-    """
-    Construct and store checkpoint plots from the bicorr_data matrix.
-    
-    Require: bicorr_data
-    Modify: fig_folder, show_flag
-            if fig_folder = None, save to same folder
-            if fig_folder = an int, that is the folder number and fig_folder is set to `#/bicorr_fig`
-    Effect: Stores .png images for plots to fig_folder
-    """
-    # Make a subfolder to store the checkpoint plots
-    if isinstance(fig_folder,str) == False:
-        fig_folder = str(fig_folder)+'/bicorr_fig'
-    
-    # If the folder doesn't exist yet, create it
-    try:
-        os.stat(fig_folder)
-    except:
-        os.mkdir(fig_folder)        
-        
-    # Which detector pairs fired?
-    plt.plot(bicorr_data['det1ch'],bicorr_data['det2ch'],'.k')
-    plt.xlabel('Detector 1 channel')
-    plt.ylabel('Detector 2 channel')
-    plt.title('Detector pairs with bicorrelation events')
-    save_fig_to_folder('bicorr_pairs_scatter.png',fig_folder)
-    if show_flag: plt.show()
-    plt.clf()
-    
-    # Plot count rate for each detector pair
-    plt.figure(figsize=(7,6))
-    plt.hist2d(bicorr_data['det1ch'],bicorr_data['det2ch'],bins=np.arange(-0.5,46.5,1),cmin=1,cmap='viridis')
-    plt.ylim([-.5,46.5])
-    plt.colorbar()
-    plt.grid(True, which='both')
-    plt.xticks([i for i in np.arange(0,46,4)])
-    plt.yticks([i for i in np.arange(0,46,4)])
-    plt.xlabel('Detector 1 channel')
-    plt.ylabel('Detector 2 channel')
-    plt.title('Frequency of detector pair interactions')
-    save_fig_to_folder('bicorr_pairs_2dhist.png',fig_folder)
-    if show_flag: plt.show()
-    plt.clf()
 
-    # Plot event number vs. line in
-    plt.plot(bicorr_data['event'])
-    plt.xlabel('Line number')
-    plt.ylabel('Event number')
-    plt.title('Event number vs. line number')
-    save_fig_to_folder('bicorr_all_evnum.png',fig_folder)
-    if show_flag: plt.show()
-    plt.clf()
 
-########### CONSTRUCT, STORE, LOAD BICORR_HIST_MASTER ############################
+########### CONSTRUCT, STORE, LOAD BICORR_HIST_MASTER: TIME ############################
 def build_dt_bin_edges(dt_min=-50,dt_max=200,dt_step=0.25,print_flag=False):
     """
     Construct dt_bin_edges for the two-dimensional bicorrelation histograms. 
@@ -592,6 +541,8 @@ def build_dt_bin_edges(dt_min=-50,dt_max=200,dt_step=0.25,print_flag=False):
         print('Built array of dt bin edges from', dt_min, 'to', dt_max, 'in', num_dt_bins,'steps of',dt_step,'ns.')
     
     return dt_bin_edges, num_dt_bins
+    
+    
     
 def alloc_bhm(num_det_pairs, num_intn_types, num_dt_bins):
     """
@@ -1409,9 +1360,10 @@ def slices_bhp(bhp, dt_bin_edges, t_slices):
     return bhp_slices, slice_dt_ranges
 
     
-def convert_energy_to_time(energy, distance = 1):
+def convert_energy_to_time(energy, distance = 1.05522):
     '''
     Convert energy in MeV to time in ns for neutrons that travel 1 m. From Matthew's `reldist.m` script. 
+    6/5/18 Changing default to 105.522 cm, which is mean distance.
     
     Parameters
     ----------
@@ -1435,9 +1387,10 @@ def convert_energy_to_time(energy, distance = 1):
     
     return time
     
-def convert_time_to_energy(time, distance = 1):
+def convert_time_to_energy(time, distance = 1.05522):
     '''
-    Convert time in ns to energy in MeV for neutrons that travel 1 m. From Matthew's `reldist.m` script. 
+    Convert time in ns to energy in MeV for neutrons that travel 1 m. From Matthew's `reldist.m` script.
+    6/5/18 Changing default to 105.522 cm, which is mean distance.
     
     If an array of times, use energy_bin_edges =  np.asarray(np.insert([bicorr.convert_time_to_energy(t) for t in dt_bin_edges[1:]],0,10000))
     
