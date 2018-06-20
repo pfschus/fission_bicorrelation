@@ -31,9 +31,15 @@ import matplotlib.pyplot as plt
 import time
 from tqdm import *
 
-from bicorr_plot import * 
-from bicorr_sums import *
-from bicorr_math import *
+# These other modules are called by bicorr.py
+# bicorr.py does not call these modules at all
+import bicorr_plot as bicorr_plot
+import bicorr_math as bicorr_math
+# This is the CORE bicorr file
+
+
+def bicorr_test():
+    print('Run for test')
 
 
 
@@ -81,6 +87,119 @@ def build_ch_lists(print_flag = False):
         print('Number of detector pairs:', num_det_pairs)
 
     return chList, fcList, detList, num_dets, num_det_pairs
+
+
+############## DET_DF AND DETECTOR PAIR ANGLES ########################################
+def load_det_df(filepath=r'../meas_info/det_df_pairs_angles.csv', remove_fc_neighbors = False, plot_flag = False):
+    """
+    Load pandas dataFrame containing detector pair information and angles. This was created in the notebook `detector_pair_angles`.
+    
+    Parameters
+    ----------
+    filepath : str, optional
+        Path (absolute or relative) to det_df file. May be `det_df.csv` or `det_df.csv`.
+        Default location is specific to pfschus folder structure
+    remove_fc_neighbors : bool, optional
+        Option to remove fission chamber neighbors and reset indices
+    plot_flag : bool, optional
+        Option to produce plots displaying basic structure of det_df
+        Plots will be displayed but not stored
+    
+    Returns
+    -------
+    det_df : pandas dataFrame
+        dataFrame of detector pair indices and angles    
+    """
+    # What kind of file is it? csv or pickle?
+    if filepath[-3:] == 'csv':
+        det_df = pd.read_csv(filepath)
+    elif filepath[-3:] == 'pkl':
+        det_df = pd.read_pickle(filepath)
+    else:
+        print('ERROR: File type not recognized')
+        det_df = 'none'        
+    
+    if remove_fc_neighbors:
+        pair_is = generate_pair_is(det_df,ignore_fc_neighbors_flag=True)
+        det_df = det_df.loc[pair_is].reset_index().rename(columns={'index':'index_og'}).copy() 
+    if plot_flag: bicorr_plot.plot_det_df(det_df, show_flag = True)
+    
+    return det_df
+        
+def d1d2_index(det_df,d1,d2):
+    """
+    Return the index of a given detector pair from det_df.
+    
+    Parameters
+    ----------
+    det_df : pandas dataFrame
+        dataFrame of detector pair indices and angles
+    d1 : int
+        detector 1 channel
+    d2 : int
+        detector 2 channel
+    
+    Returns
+    -------
+    ind : int
+        index of that detector pair in det_df    
+    """
+    if d2 < d1:
+        print('Warning: d2 < d1. Channels inverted')
+        # swap numbers
+        a = d1; d1 = d2; d2 = a
+        
+    ind = det_df.index[(det_df['d1']==d1) & (det_df['d2']==d2)][0]
+    
+    return ind
+        
+def build_dict_det_pair(det_df):
+    """
+    Build the dictionary that converts from detector pair to index and angle
+    
+    Parameters
+    ----------
+    det_df : pandas dataFrame
+        dataFrame of detector pair indices and angles   
+    
+    Returns
+    -------
+    dict_pair_to_index : dict
+        keys: detector pair indices (100*det1ch+det2ch)
+        values: index of pair in bicorr_hist_master (along first axis)
+    dict_index_to_pair : dict
+        Reverse version of dict_pair_to_index
+    dict_pair_to_angle : dict
+        keys: detector pair indices (100*det1ch+det2ch)
+        values : angle of pair
+    """
+    dict_index_to_pair = det_df['d1d2'].to_dict()
+    dict_pair_to_index = {v: k for k, v in dict_index_to_pair.items()}  
+
+    dict_pair_to_angle = pd.Series(det_df['angle'].values,index=det_df['d1d2']).to_dict()
+    
+    return dict_pair_to_index, dict_index_to_pair, dict_pair_to_angle        
+    
+def build_dict_det_dist(file_path = '../meas_info/detector_distances.xlsx'):
+    '''
+    Load excel file with detector distances, convert to m, and send to a dictionary.
+    
+    Parameters
+    ----------
+    file_path : str, optional
+        Relative location of excel file with detector distances in it
+        
+    Returns
+    -------
+    dict_det_dist : dict
+        Dictionary of detector channel number : distance from fc
+    '''
+    det_distance_df = pd.read_excel(file_path)
+    det_distance_df['Distance (cm)'] /= 100 # convert to m
+    dict_det_dist = dict(zip(det_distance_df['Channel'], det_distance_df['Distance (cm)']))
+    return dict_det_dist
+    
+
     
 ############### CALC SINGLES RATES FROM CCED #################################
 def generate_singles_hist(folder_start=1,folder_end=2, save_flag = True, print_flag=True):
@@ -271,7 +390,7 @@ def build_singles_hist(cced_filename, cced_path, plot_flag = True, fig_folder = 
         plt.title('Singles TOF distribution, all channels')
         plt.legend(['N','G'])
         plt.yscale('log')
-        save_fig_to_folder('singles_TOF_dist.png',fig_folder)
+        bicorr_plot.save_fig_to_folder('singles_TOF_dist.png',fig_folder)
         if show_flag: plt.show()
         plt.clf()  
     
@@ -324,10 +443,8 @@ def load_singles_hist(filename='singles_hist.npz',filepath=None,plot_flag = Fals
     
     # Make some plots
     if plot_flag:
-        plot_singles_hist(singles_hist,dt_bin_edges,save_flag,fig_folder,show_flag)
+        bicorr_plot.plot_singles_hist(singles_hist,dt_bin_edges,save_flag,fig_folder,show_flag)
   
-    
-
     return singles_hist, dt_bin_edges, dict_det_to_index, dict_index_to_det
         
 ############### GENERATE BICORR FROM CCED ####################################
@@ -708,7 +825,7 @@ def build_bhm(folder_start=1,folder_end=2, det_df = None, dt_bin_edges = None, c
         bicorr_data = load_bicorr(folder, root_path = root_path)
         if checkpoint_flag:
             fig_folder = os.path.join(root_path + '/' + str(folder) + '/fig')
-            bicorr_checkpoint_plots(bicorr_data,fig_folder = fig_folder,show_flag=False)
+            bicorr_plot.bicorr_checkpoint_plots(bicorr_data,fig_folder = fig_folder,show_flag=False)
         if print_flag: print('Building bhm in folder ',folder)
         bhm = fill_bhm(bhm,bicorr_data, det_df, dt_bin_edges, disable_tqdm = disable_tqdm)
         
@@ -1051,98 +1168,6 @@ def revive_sparse_bhm(sparse_bhm, det_df, dt_bin_edges, bhm = None):
     
     
 
-############## DET_DF AND DETECTOR PAIR ANGLES ########################################
-def load_det_df(filepath=r'../meas_info/det_df_pairs_angles.csv', remove_fc_neighbors = False, plot_flag = False):
-    """
-    Load pandas dataFrame containing detector pair information and angles. This was created in the notebook `detector_pair_angles`.
-    
-    Parameters
-    ----------
-    filepath : str, optional
-        Path (absolute or relative) to det_df file. May be `det_df.csv` or `det_df.csv`.
-        Default location is specific to pfschus folder structure
-    remove_fc_neighbors : bool, optional
-        Option to remove fission chamber neighbors and reset indices
-    plot_flag : bool, optional
-        Option to produce plots displaying basic structure of det_df
-        Plots will be displayed but not stored
-    
-    Returns
-    -------
-    det_df : pandas dataFrame
-        dataFrame of detector pair indices and angles    
-    """
-    # What kind of file is it? csv or pickle?
-    if filepath[-3:] == 'csv':
-        det_df = pd.read_csv(filepath)
-    elif filepath[-3:] == 'pkl':
-        det_df = pd.read_pickle(filepath)
-    else:
-        print('ERROR: File type not recognized')
-        det_df = 'none'        
-    
-    if remove_fc_neighbors:
-        pair_is = generate_pair_is(det_df,ignore_fc_neighbors_flag=True)
-        det_df = det_df.loc[pair_is].reset_index().rename(columns={'index':'index_og'}).copy() 
-    if plot_flag: plot_det_df(det_df, show_flag = True)
-    
-    return det_df
-        
-def d1d2_index(det_df,d1,d2):
-    """
-    Return the index of a given detector pair from det_df.
-    
-    Parameters
-    ----------
-    det_df : pandas dataFrame
-        dataFrame of detector pair indices and angles
-    d1 : int
-        detector 1 channel
-    d2 : int
-        detector 2 channel
-    
-    Returns
-    -------
-    ind : int
-        index of that detector pair in det_df    
-    """
-    if d2 < d1:
-        print('Warning: d2 < d1. Channels inverted')
-        # swap numbers
-        a = d1; d1 = d2; d2 = a
-        
-    ind = det_df.index[(det_df['d1']==d1) & (det_df['d2']==d2)][0]
-    
-    return ind
-        
-def build_dict_det_pair(det_df):
-    """
-    Build the dictionary that converts from detector pair to index and angle
-    
-    Parameters
-    ----------
-    det_df : pandas dataFrame
-        dataFrame of detector pair indices and angles   
-    
-    Returns
-    -------
-    dict_pair_to_index : dict
-        keys: detector pair indices (100*det1ch+det2ch)
-        values: index of pair in bicorr_hist_master (along first axis)
-    dict_index_to_pair : dict
-        Reverse version of dict_pair_to_index
-    dict_pair_to_angle : dict
-        keys: detector pair indices (100*det1ch+det2ch)
-        values : angle of pair
-    """
-    dict_index_to_pair = det_df['d1d2'].to_dict()
-    dict_pair_to_index = {v: k for k, v in dict_index_to_pair.items()}  
-
-    dict_pair_to_angle = pd.Series(det_df['angle'].values,index=det_df['d1d2']).to_dict()
-    
-    return dict_pair_to_index, dict_index_to_pair, dict_pair_to_angle        
-    
-
 ###########################################################################################
 
     
@@ -1349,7 +1374,7 @@ def slices_bhp(bhp, dt_bin_edges, t_slices):
     slice_dt_ranges : ndarray
         Array of slice_dt_ranges. Dimensions: len(t_slices) x 2 (min, max)
     '''
-    dt_bin_centers = calc_centers(dt_bin_edges)
+    dt_bin_centers = bicorr_math.calc_centers(dt_bin_edges)
     bhp_slices = np.zeros((len(t_slices),len(dt_bin_centers)))
     slice_dt_ranges = np.zeros((len(t_slices),2))
     
@@ -1360,61 +1385,7 @@ def slices_bhp(bhp, dt_bin_edges, t_slices):
     return bhp_slices, slice_dt_ranges
 
     
-def convert_energy_to_time(energy, distance = 1.05522):
-    '''
-    Convert energy in MeV to time in ns for neutrons that travel 1 m. From Matthew's `reldist.m` script. 
-    6/5/18 Changing default to 105.522 cm, which is mean distance.
-    
-    Parameters
-    ----------
-    energy : float
-        Neutron energy in MeV
-    distance : float, optional
-        Neutron flight distance in meters
-        
-    Returns
-    -------
-    time : float
-        Time of flight of neutron
-    '''
-    # Constants
-    m_n = 939.565 # MeV/c2
-    c = 2.99e8 # m/s
-    
-    # Calculations
-    v = c*np.sqrt(2*energy/m_n)
-    time = np.divide(distance/v,1e-9)
-    
-    return time
-    
-def convert_time_to_energy(time, distance = 1.05522):
-    '''
-    Convert time in ns to energy in MeV for neutrons that travel 1 m. From Matthew's `reldist.m` script.
-    6/5/18 Changing default to 105.522 cm, which is mean distance.
-    
-    If an array of times, use energy_bin_edges =  np.asarray(np.insert([bicorr.convert_time_to_energy(t) for t in dt_bin_edges[1:]],0,10000))
-    
-    Parameters
-    ----------
-    time : float
-        Time of flight of neutron in ns
-    distance : float, optional
-        Neutron flight distance in meters
-        
-    Returns
-    -------
-    energy : float
-        Neutron energy in MeV
-    '''
-    
-    # Constants
-    m_n = 939.565 # MeV/c2
-    c = 2.99e8 # m/s
-    
-    v = distance * 1e9 / time # ns -> s
-    energy = (m_n/2)*(v/c)**2
-    
-    return energy
+
     
 def calc_nn_sum(bicorr_hist_plot, dt_bin_edges, emin = 0.62, emax = 12, return_real_energies_flag = False):
     """
@@ -1618,6 +1589,9 @@ def main(folder_start = 1,folder_end = 2, option = [1,2]):
     if 3 in option:
         print('********* Build singles_hist **************')
         generate_singles_hist(folder_start,folder_end)
+    if 4 in option:
+        print('********* Build bhm_e *********************')
+        build_bhm_e(folder_start,folder_end)
         
 if __name__ == "__main__":
     """
@@ -1634,6 +1608,7 @@ if __name__ == "__main__":
         1: generate_bicorr
         2: build_bhm pos and neg, store sparse_bhm
         3: generate_singles_hist, store singles_hist.npz
+        4: generate bhm_e
         Default: Run everything
     
 	"""

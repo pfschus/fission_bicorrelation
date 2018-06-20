@@ -19,9 +19,9 @@ import matplotlib.pyplot as plt
 import time
 from tqdm import *
 
-from bicorr import *
-from bicorr_plot import * 
-from bicorr_math import *
+import bicorr as bicorr
+import bicorr_plot as bicorr_plot
+import bicorr_math as bicorr_math
 
 # --SINGLES SUMS TO SINGLES_DF ---------------------------------------------
 def init_singles_df(dict_index_to_det):
@@ -103,7 +103,7 @@ def fill_det_df_doubles_sums(det_df, bhp_nn_pos, bhp_nn_neg, dt_bin_edges, emin,
     Calculate and fill det_df doubles sums C and N
     '''
     for index in det_df.index.values:
-        Cp, Cn, Cd, err_Cd, energies_real = calc_nn_sum_br(bhp_nn_pos[index,:,:],
+        Cp, Cn, Cd, err_Cd, energies_real = bicorr.calc_nn_sum_br(bhp_nn_pos[index,:,:],
                                                    bhp_nn_neg[index,:,:],
                                                    dt_bin_edges,
                                                    emin=emin, emax=emax, return_real_energies_flag = True)
@@ -111,7 +111,7 @@ def fill_det_df_doubles_sums(det_df, bhp_nn_pos, bhp_nn_neg, dt_bin_edges, emin,
         det_df.loc[index,'Cn'] = Cn
         det_df.loc[index,'Cd'] = Cd
         det_df.loc[index,'Cd_err'] = err_Cd
-        Np, Nn, Nd, err_Nd, energies_real = calc_nn_sum_br(bhp_nn_pos[index,:,:],
+        Np, Nn, Nd, err_Nd, energies_real = bicorr.calc_nn_sum_br(bhp_nn_pos[index,:,:],
                                                    bhp_nn_neg[index,:,:],
                                                    dt_bin_edges,
                                                    emin=emin, emax=emax,
@@ -149,7 +149,7 @@ def condense_det_df_by_angle(det_df,angle_bin_edges, C_flag=False, plot_flag = F
     
     C_flag: Option to calculate average total count (before singles correction)
     '''
-    angle_bin_centers = calc_centers(angle_bin_edges)
+    angle_bin_centers = bicorr_math.calc_centers(angle_bin_edges)
         
     # Set up by_angle_df
     by_angle_df = pd.DataFrame({'angle_bin_min':angle_bin_edges[:-1],
@@ -166,7 +166,7 @@ def condense_det_df_by_angle(det_df,angle_bin_edges, C_flag=False, plot_flag = F
         by_angle_df['std_Cd'] = np.nan
         
     for index in np.arange(len(angle_bin_edges)-1):
-        pair_is = generate_pair_is(det_df,angle_bin_edges[index],angle_bin_edges[index+1],True)
+        pair_is = bicorr.generate_pair_is(det_df,angle_bin_edges[index],angle_bin_edges[index+1],True)
         if len(pair_is) > 0:
             by_angle_df.loc[index,'len pair_is'] = len(pair_is)  
             by_angle_df.loc[index,'std_angle'] = np.std(det_df.loc[pair_is,'angle'])
@@ -228,7 +228,7 @@ def calc_Asym(by_angle_df, std_flag = True):
         num_err = series_180['W_err']
         denom_err = series_90['W_err']
     
-    Asym, Asym_err = prop_err_division(num,num_err,denom,denom_err)
+    Asym, Asym_err = bicorr_math.prop_err_division(num,num_err,denom,denom_err)
     
     return Asym, Asym_err
         

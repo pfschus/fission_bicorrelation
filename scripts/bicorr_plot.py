@@ -27,9 +27,8 @@ import matplotlib.pyplot as plt
 import time
 from tqdm import *
 
-from bicorr import *
-from bicorr_sums import *
-from bicorr_math import *
+# Don't import any bicorr modules here
+# Other modules will import bicorr_plot, but not the other way around
 
 
 ############### SOME GENERAL FUNCTIONS TO KEEP AROUND ########################

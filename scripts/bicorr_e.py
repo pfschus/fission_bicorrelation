@@ -10,7 +10,7 @@ import pandas as pd
 import scipy.io as sio
 import sys
 import matplotlib
-import seaborn as sns
+import seaborn as 
 sns.set(style='ticks')
 
 #matplotlib.use('agg') # for flux
@@ -18,10 +18,7 @@ import matplotlib.pyplot as plt
 import time
 from tqdm import *
 
-from bicorr import *
-from bicorr_plot import * 
-from bicorr_sums import *
-from bicorr_math import *
+import bicorr as bicorr
 
 def build_energy_bin_edges(e_min=0,e_max=15,e_step=.025,print_flag=False):
     """
@@ -55,24 +52,7 @@ def build_energy_bin_edges(e_min=0,e_max=15,e_step=.025,print_flag=False):
     
     return e_bin_edges, num_e_bins    
 
-def build_dict_det_dist(file_path = '../meas_info/detector_distances.xlsx'):
-    '''
-    Load excel file with detector distances, convert to m, and send to a dictionary.
-    
-    Parameters
-    ----------
-    file_path : str, optional
-        Relative location of excel file with detector distances in it
-        
-    Returns
-    -------
-    dict_det_dist : dict
-        Dictionary of detector channel number : distance from fc
-    '''
-    det_distance_df = pd.read_excel(file_path)
-    det_distance_df['Distance (cm)'] /= 100 # convert to m
-    dict_det_dist = dict(zip(det_distance_df['Channel'], det_distance_df['Distance (cm)']))
-    return dict_det_dist
+
     
 def alloc_bhm_e(num_det_pairs, num_intn_types, num_e_bins):
     """
@@ -133,7 +113,7 @@ def fill_bhm_e(bhm_e, bicorr_data, det_df, dict_det_dist, e_bin_edges, disable_t
     bhm_e : ndarray
         Same as input, but filled with event information from bicorr_data
     """
-    dict_pair_to_index, dict_index_to_pair, dict_pair_to_angle = build_dict_det_pair(det_df)
+    dict_pair_to_index, dict_index_to_pair, dict_pair_to_angle = bicorr.build_dict_det_pair(det_df)
     
     e_min = np.min(e_bin_edges)
     e_max = np.max(e_bin_edges)
@@ -149,8 +129,8 @@ def fill_bhm_e(bhm_e, bicorr_data, det_df, dict_det_dist, e_bin_edges, disable_t
             det1dist = dict_det_dist[event['det1ch']]
             det2dist = dict_det_dist[event['det2ch']]
 
-            det1e = convert_time_to_energy(det1t, det1dist)
-            det2e = convert_time_to_energy(det2t, det2dist)
+            det1e = bicorr_math.convert_time_to_energy(det1t, det1dist)
+            det2e = bicorr_math.convert_time_to_energy(det2t, det2dist)
 
             # Check that they are in range of the histogram        
             if np.logical_and(e_min < det1e < e_max, e_min < det2e < e_max):
@@ -216,8 +196,8 @@ def build_bhm_e(folder_start=1,folder_end=2, det_df = None, dict_det_dist = None
         One-dimensional array of energy bin edges
     """    
     # Load det_df, dict_det_dist if not provided
-    if det_df is None: det_df = load_det_df()
-    if dict_det_dist is None: dict_det_dist = build_dict_det_dist()
+    if det_df is None: det_df = bicorr.load_det_df()
+    if dict_det_dist is None: dict_det_dist = bicorr.build_dict_det_dist()
     
     # If no data path provided, look for data folders here
     if root_path is None: root_path = os.getcwd()
@@ -242,10 +222,10 @@ def build_bhm_e(folder_start=1,folder_end=2, det_df = None, dict_det_dist = None
     # Loop through each folder and fill the histogram
     for folder in folders:
         if print_flag: print('Loading data in folder ',folder)
-        bicorr_data = load_bicorr(folder, root_path = root_path)
+        bicorr_data = bicorr.load_bicorr(folder, root_path = root_path)
         if checkpoint_flag:
             fig_folder = os.path.join(root_path + '/' + str(folder) + '/fig')
-            bicorr_checkpoint_plots(bicorr_data,fig_folder = fig_folder,show_flag=False)
+            bicorr_plot.bicorr_checkpoint_plots(bicorr_data,fig_folder = fig_folder,show_flag=False)
         if print_flag: print('Building bhm in folder ',folder)
         bhm_e = fill_bhm_e(bhm_e, bicorr_data, det_df, dict_det_dist, e_bin_edges, disable_tqdm = False)
         
