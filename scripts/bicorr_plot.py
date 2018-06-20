@@ -16,6 +16,7 @@ import pandas as pd
 import scipy.io as sio
 import sys
 import matplotlib
+from matplotlib.pyplot import cm 
 import seaborn as sns
 sns.set(style='ticks')
 
@@ -63,6 +64,32 @@ def save_fig_to_folder(fig_filename,fig_folder='fig',extensions=['png','pdf']):
             os.mkdir(fig_folder)
         for extension in extensions:
             plt.savefig(fig_folder+'/'+fig_filename+'.'+extension,dpi=300) 
+            
+def histogram_metrics(values, xlabel = 'x', ylabel = 'y'):
+    """
+    Plot histogram with some metrics overlaid (mean, std, median)
+    
+    Parameters
+    ----------
+    values : array-like
+        Values for the histogram
+    xlabel : str, optional
+    ylabel : str, optional
+    """
+    mu = np.mean(values)
+    sigma = np.std(values)
+    med = np.median(values)
+    
+    plt.figure(figsize=(4,3))
+    sns.distplot(values, rug=True)
+    plt.axvline(mu,color='k',linewidth=1)
+    plt.axvline(mu-sigma,color='k',linewidth=.5)
+    plt.axvline(mu+sigma,color='k',linewidth=.5)
+    plt.axvline(med,color='r',linewidth=.5)
+    plt.xlabel(xlabel)
+    plt.ylabel(ylabel)
+    sns.despine(right=False)
+    plt.show()
 
 def step_plot(edges,y, linewidth=.5, color='k', zorder = 1):
     """
@@ -94,6 +121,7 @@ def step_plot(edges,y, linewidth=.5, color='k', zorder = 1):
     for i in range(len(y)-1):
         plt.vlines(edges[i+1],y[i],y[i+1],linewidth=linewidth,color=color,zorder=zorder)
 
+        
             
 ##################### EXPERIMENTAL SETUP STUFF ###########################
 def plot_det_df(det_df, which = ['index','angle'], cmap='viridis', title_flag = True, save_flag = False, fig_folder = 'fig', show_flag = True, clear_flag = True):
@@ -150,7 +178,66 @@ def plot_det_df(det_df, which = ['index','angle'], cmap='viridis', title_flag = 
         if save_flag: save_fig_to_folder('det_df_ch_to_angle',fig_folder=fig_folder) 
         if show_flag: plt.show()
         if clear_flag: plt.clf()
-            
+
+##################### GENERATING BICORR FILE ###########################
+
+def bicorr_checkpoint_plots(bicorr_data, fig_folder = 'fig', show_flag = False):
+    """
+    Construct and store checkpoint plots from the bicorr_data matrix.
+    
+    Require: bicorr_data
+    Modify: fig_folder, show_flag
+            if fig_folder = None, save to same folder
+            if fig_folder = an int, that is the folder number and fig_folder is set to `#/bicorr_fig`
+    Effect: Stores .png images for plots to fig_folder
+    """
+    # Make a subfolder to store the checkpoint plots
+    if isinstance(fig_folder,str) == False:
+        fig_folder = str(fig_folder)+'/bicorr_fig'
+    
+    # If the folder doesn't exist yet, create it
+    try:
+        os.stat(fig_folder)
+    except:
+        os.mkdir(fig_folder)        
+        
+    # Which detector pairs fired?
+    plt.plot(bicorr_data['det1ch'],bicorr_data['det2ch'],'.k')
+    plt.xlabel('Detector 1 channel')
+    plt.ylabel('Detector 2 channel')
+    plt.title('Detector pairs with bicorrelation events')
+    save_fig_to_folder('bicorr_pairs_scatter.png',fig_folder)
+    if show_flag: plt.show()
+    plt.clf()
+    
+    # Plot count rate for each detector pair
+    plt.figure(figsize=(7,6))
+    plt.hist2d(bicorr_data['det1ch'],bicorr_data['det2ch'],bins=np.arange(-0.5,46.5,1),cmin=1,cmap='viridis')
+    plt.ylim([-.5,46.5])
+    plt.colorbar()
+    plt.grid(True, which='both')
+    plt.xticks([i for i in np.arange(0,46,4)])
+    plt.yticks([i for i in np.arange(0,46,4)])
+    plt.xlabel('Detector 1 channel')
+    plt.ylabel('Detector 2 channel')
+    plt.title('Frequency of detector pair interactions')
+    save_fig_to_folder('bicorr_pairs_2dhist.png',fig_folder)
+    if show_flag: plt.show()
+    plt.clf()
+
+    # Plot event number vs. line in
+    plt.plot(bicorr_data['event'])
+    plt.xlabel('Line number')
+    plt.ylabel('Event number')
+    plt.title('Event number vs. line number')
+    save_fig_to_folder('bicorr_all_evnum.png',fig_folder)
+    if show_flag: plt.show()
+    plt.clf()
+
+
+
+
+        
             
 ################# SINGLES_HIST ########################
 def plot_singles_hist(singles_hist,dt_bin_edges,
@@ -418,10 +505,11 @@ def W_vs_angle(det_df, by_angle_df, show_flag = True, save_flag = True, clf_flag
     
         
 ######################### SLICES ############################
-def plot_bhp_slice(bhp_slice, dt_bin_edges, slice_dt_range = None, normalized = None,
-                   title = True, show_flag = False,
+def plot_bhp_slice(bhp_slice, bin_edges, bin_units = 'time', 
+                   slice_range = None, normalized = None,
+                   c = 'k', title = False, show_flag = False,
                    save_flag = False, save_filename = 'bhp_slice', save_folder = 'fig', new_fig = True, clear = True, msize=5,
-                   t_norm_range = None):
+                   norm_range = None):
     """
     Plot bhp slice.
     
@@ -429,10 +517,12 @@ def plot_bhp_slice(bhp_slice, dt_bin_edges, slice_dt_range = None, normalized = 
     ----------
     bhp_slice : ndarray
         Slice through bhp at delta_tj_min, produce with slice_bhp()
-    dt_bin_edges : ndarray
-        One-dimensional array of time bin edges
-    slice_dt_range : array or float, optional
-        Range of dt values over which slice was taken. Primarily used for creating a title or legend
+    bin_edges : ndarray
+        One-dimensional array of bin edges
+    bin_units : str, optional
+        Units for labels. 'time' or 'energy'
+    slice_range : array or float, optional
+        Range of time or energy values over which slice was taken. Primarily used for creating a title or legend
         if None: not provided
         if array: Min and max of slice range, ex: [slice_dt_min, slice_dt_max]
         if float: Slice position, ex: slice_dt_middle
@@ -440,6 +530,8 @@ def plot_bhp_slice(bhp_slice, dt_bin_edges, slice_dt_range = None, normalized = 
         None: Don't normalize
         'int': Normalize by integral
         'max': Normalize by height
+    c : str, optional
+        Color of step plot
     title : str, optional
         Title for plot. Ex: '$\Delta t_j$ = {}'.format(dt_bin_centers[i])
         if default True, print according to slice_dt_range
@@ -459,43 +551,45 @@ def plot_bhp_slice(bhp_slice, dt_bin_edges, slice_dt_range = None, normalized = 
         Clear matplotlib after creating bicorr plot. (If set to False, you can add more plots before showing, saving, or clearing the figure)   
     msize : int, optional
         Marker size
-    t_norm_range : list of floats, optional
-        Range of times for normalization. Ex [15,150]
+    norm_range : list of floats, optional
+        Range of bin edges for normalization. Ex [15,150]
+        Not yet available for energy units
     
     Returns
     -------
     n/a
-    
-    
-    NEED TO UPDATE
-    How I use the mask....
     """
        
     if new_fig: plt.figure(figsize=(4,4))
     
-    if t_norm_range is not None:
-        imin = np.digitize(t_norm_range[0],dt_bin_edges)-1
-        imax = np.digitize(t_norm_range[1],dt_bin_edges)-1  
+    if norm_range is not None:
+        imin = np.digitize(norm_range[0],bin_edges)-1
+        imax = np.digitize(norm_range[1],bin_edges)-1  
     else:
         imin = 0
-        imax = len(dt_bin_edges)
+        imax = len(bin_edges)
     
-    if normalized is 'max':   
-        plt.plot(calc_centers(dt_bin_edges),bhp_slice/np.max(bhp_slice[imin:imax]),'.-',markersize=msize,linewidth = .5)
+    if normalized is 'max':  
+        step_plot(bin_edges, bhp_slice/np.max(bhp_slice[imin:imax]), linewidth=.5, color = c)
         plt.ylabel('Counts normalized by maximum')
     elif normalized is 'int': 
-        plt.plot(calc_centers(dt_bin_edges),bhp_slice/np.sum(bhp_slice[imin:imax]),'.-',markersize=msize,linewidth = .5)
+        step_plot(bin_edges, bhp_slice/np.sum(bhp_slice[imin:imax]), linewidth=.5, color = c)
         plt.ylabel('Counts normalized by integral')
     else: 
-        plt.plot(calc_centers(dt_bin_edges),bhp_slice,'.-',markersize=msize,linewidth = .5)
+        step_plot(bin_edges, bhp_slice, linewidth=.5)
+        plt.plot(calc_centers(bin_edges),bhp_slice,'.-',markersize=msize,linewidth = .5, color = c)
         plt.ylabel('Counts')
-    plt.xlabel('$\Delta t_i$')
     
-    if title is True: # Make a title according to slice_dt_range
-        if type(slice_dt_range) is list: # Min and max boundaries
-            plt.title('$\Delta t_j$ = {} to {}'.format(slice_dt_range[0],slice_dt_range[1]))
+    if bin_units is 'time': plt.xlabel('$\Delta t_i$')
+    elif bin_units is 'energy': plt.xlabel('$\Delta E_i$')
+    
+    if title is True: # Make a title according to slice_range
+        if type(slice_range) is list: # Min and max boundaries
+            plt.title('$\Delta t_j$ = {} to {}'.format(slice_range[0],slice_range[1]))
         else: # float
-            plt.title('$\Delta t_j$ = {}'.format(slice_dt_range))
+            plt.title('$\Delta t_j$ = {}'.format(slice_range))
+    elif title is False:
+        pass
     elif title is not None: # print custom title
         plt.title(title)
     
@@ -505,35 +599,53 @@ def plot_bhp_slice(bhp_slice, dt_bin_edges, slice_dt_range = None, normalized = 
     if show_flag: plt.show()
     if clear: plt.clf()
 
-def plot_bhp_slices(bhp_slices,dt_bin_edges,t_slices,slice_dt_ranges):
+def plot_bhp_slices(bhp_slices,bin_edges,bin_units='time',slice_range = None,new_fig=True,show_flag=True, log_flag = False):
     '''
     Plot bhp_slices on same axes, normalized by integral
     
     Parameters
     ----------
     bhp_slices : ndarray
-        Array of bhp slices. Dimensions: len(t_slices) x len(dt_bin_centers)    
-    dt_bin_edges : ndarray
-        One-dimensional array of time bin edges
-    slice_dt_ranges : ndarray
-        Array of slice_dt_ranges. Dimensions: len(t_slices) x 2 (min, max)
+        Array of bhp slices. Dimensions: # slices x len(dt_bin_centers)    
+    bin_edges : ndarray
+        One-dimensional array of bin edges, time or energy
+    bin_units : str, optional
+        Units for labels. 'time' or 'energy'
+    slice_range : ndarray
+        Array of slice ranges. Dimensions: # slices x 2 (min, max)
+        Either time or energy
+    new_fig : bool, optional
+        Option to start new figure
+    show_flag : bool, optional
+        Option to display
     
     Returns
     -------
-    n/a
+    legend_text : str
+        String of legend text
     '''
-    plt.figure(figsize=(4,3))
-    legend_text = []
+    if new_fig: plt.figure(figsize=(4,3))
+    legend_text = []    
     
-    for t in t_slices:
-        i = t_slices.index(t) # Works as long as t_slices is unique
-        plot_bhp_slice(bhp_slices[i,:],dt_bin_edges,slice_dt_ranges[i,:],normalized='int',clear=False,new_fig=False)
-        legend_text.append('{} to {}'.format(slice_dt_ranges[i,0],slice_dt_ranges[i,1]))
+    color = iter(cm.rainbow(np.linspace(0,1,bhp_slices.shape[0]))) # Set up colors for plotting
+    
+    for i in range(bhp_slices.shape[0]): # Loop through slices
+        c = next(color);         
+        plot_bhp_slice(bhp_slices[i,:],bin_edges,bin_units,slice_range[i,:],normalized='int',c=c,clear=False,new_fig=False,title=False)
+        if slice_range is not None: legend_text.append('{:04.2f} to {:04.2f}'.format(np.min(slice_range[i,:]),np.max(slice_range[i,:])))
         
     plt.legend(legend_text)
     plt.title('Slices normalized by integral')
-    plt.show()
-        
+    
+    # Hack legend       
+    ax = plt.gca()
+    leg = ax.get_legend()
+    color = iter(cm.rainbow(np.linspace(0,1,bhp_slices.shape[0]))) # Reset colors
+    for i in range(bhp_slices.shape[0]): # Make legend
+        c = next(color)
+        leg.legendHandles[i].set_color(c)        
+    
+    if show_flag: plt.show()
 
-
+    return legend_text
     
