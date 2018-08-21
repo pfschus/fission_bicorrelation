@@ -450,8 +450,6 @@ def generate_bicorr(folder_start=1,folder_end=2,root_path=None):
 	Reads in cced file, format: event, detector, particle_type, time, integral, height
 	Produces bicorr file, format: event, det1ch, det1par, det1t, det2ch, det2par, det2t
     
-    I'm going to HARDCODE a pulse height threshold of 100 keVee. This is dangerous but I'm doing it to push through this analysis. -PFS 8/21/18
-    
     Parameters
     ----------
     folder_start : int, optional
@@ -479,9 +477,6 @@ def generate_bicorr(folder_start=1,folder_end=2,root_path=None):
     
     # Detector info
     chList, fcList, detList, num_dets, num_det_pairs = build_ch_lists()
-    
-    # Hard code pulse height threshold
-    Ethres = 0.1 # keVee
 
     # Run through folders
     for folder in folders:    
@@ -544,17 +539,14 @@ def generate_bicorr(folder_start=1,folder_end=2,root_path=None):
                             # Store dt and particle type for each detector event
                             dt       = ccedEvent[det_indices]['time']-ccedEvent[fc_indices]['time']+time_offset
                             par_type = ccedEvent[det_indices]['particle_type']
-                            heights  = ccedEvent[det_indices]['height']
                             
                             # Write out event info from all detector pairs
                             for d1 in range(0,len(det_indices)-1,1):
                                 for d2 in range(d1+1,len(det_indices),1):
-                                    # Energy threshold HERE:                             
-                                    if np.logical_and(heights[d1] > Ethresh, heights[d2] > Ethresh):
-                                        print_file.write(str(ccedEvent[0]['event'])
-                                            + '  ' + str(dets_present[d1]) + '  ' + str(par_type[d1]) + '  ' + str(dt[d1]) 
-                                            + '  ' + str(dets_present[d2]) + '  ' + str(par_type[d2]) + '  ' + str(dt[d2])
-                                            + '\n')
+                                    print_file.write(str(ccedEvent[0]['event'])
+                                        + '  ' + str(dets_present[d1]) + '  ' + str(par_type[d1]) + '  ' + str(dt[d1]) 
+                                        + '  ' + str(dets_present[d2]) + '  ' + str(par_type[d2]) + '  ' + str(dt[d2])
+                                        + '\n')
                     
                 eventNum = e  # Move on to next event
                 i = l         # Current line is the first line for next event
