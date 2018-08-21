@@ -14,21 +14,21 @@ Changelog:
 2017_06_07 major changes to use det_df instead of dicts
 """
 
+import matplotlib
+#matplotlib.use('agg') # for flux
+import matplotlib.pyplot as plt
+import seaborn as sns
+sns.set(style='ticks')
+
+import sys
 import os
 import os.path
+import scipy.io as sio
+
 import time
 import numpy as np
 np.set_printoptions(threshold=np.nan) # print entire matrices
 import pandas as pd
-import scipy.io as sio
-import sys
-import matplotlib
-import seaborn as sns
-sns.set(style='ticks')
-
-#matplotlib.use('agg') # for flux
-import matplotlib.pyplot as plt
-import time
 from tqdm import *
 
 # These other modules are called by bicorr.py
@@ -36,11 +36,6 @@ from tqdm import *
 import bicorr_plot as bicorr_plot
 import bicorr_math as bicorr_math
 # This is the CORE bicorr file
-
-
-def bicorr_test():
-    print('Run for test')
-
 
 
 ############### SET UP SYSTEM INFORMATION ####################################      
@@ -455,6 +450,8 @@ def generate_bicorr(folder_start=1,folder_end=2,root_path=None):
 	Reads in cced file, format: event, detector, particle_type, time, integral, height
 	Produces bicorr file, format: event, det1ch, det1par, det1t, det2ch, det2par, det2t
     
+    I'm going to HARDCODE a pulse height threshold of 100 keVee. This is dangerous but I'm doing it to push through this analysis. -PFS 8/21/18
+    
     Parameters
     ----------
     folder_start : int, optional
@@ -482,6 +479,9 @@ def generate_bicorr(folder_start=1,folder_end=2,root_path=None):
     
     # Detector info
     chList, fcList, detList, num_dets, num_det_pairs = build_ch_lists()
+    
+    # Hard code pulse height threshold
+    Ethres = 0.1 # keVee
 
     # Run through folders
     for folder in folders:    
@@ -544,14 +544,17 @@ def generate_bicorr(folder_start=1,folder_end=2,root_path=None):
                             # Store dt and particle type for each detector event
                             dt       = ccedEvent[det_indices]['time']-ccedEvent[fc_indices]['time']+time_offset
                             par_type = ccedEvent[det_indices]['particle_type']
+                            heights  = ccedEvent[det_indices]['height']
                             
                             # Write out event info from all detector pairs
                             for d1 in range(0,len(det_indices)-1,1):
                                 for d2 in range(d1+1,len(det_indices),1):
-                                    print_file.write(str(ccedEvent[0]['event'])
-                                        + '  ' + str(dets_present[d1]) + '  ' + str(par_type[d1]) + '  ' + str(dt[d1]) 
-                                        + '  ' + str(dets_present[d2]) + '  ' + str(par_type[d2]) + '  ' + str(dt[d2])
-                                        + '\n')
+                                    # Energy threshold HERE:                             
+                                    if np.logical_and(heights[d1] > Ethresh, heights[d2] > Ethresh):
+                                        print_file.write(str(ccedEvent[0]['event'])
+                                            + '  ' + str(dets_present[d1]) + '  ' + str(par_type[d1]) + '  ' + str(dt[d1]) 
+                                            + '  ' + str(dets_present[d2]) + '  ' + str(par_type[d2]) + '  ' + str(dt[d2])
+                                            + '\n')
                     
                 eventNum = e  # Move on to next event
                 i = l         # Current line is the first line for next event
@@ -617,7 +620,8 @@ def load_bicorr(folder_number = None, bicorr_path = None, root_path = None):
 
     # If folder_number used, set up filename. For example, folder 1 is '1/bicorr1'
     if bicorr_path is None:
-        bicorr_path = os.path.join(root_path + '/' + str(folder_number)+'/bicorr'+str(folder_number))     
+        bicorr_path = os.path.join(root_path + '/' + str(folder_number)+'/bicorr'+str(folder_number))   
+    # else:
     
     # Load it
     bicorr_data = np.genfromtxt(bicorr_path,dtype=bicorrType)
@@ -1414,8 +1418,8 @@ def calc_nn_sum(bicorr_hist_plot, dt_bin_edges, emin = 0.62, emax = 12, return_r
     """
     
     # Find the corresponding lower and upper time boundaries
-    tmin = convert_energy_to_time(emax)
-    tmax = convert_energy_to_time(emin)
+    tmin = bicorr_math.convert_energy_to_time(emax)
+    tmax = bicorr_math.convert_energy_to_time(emin)
 
     # Find bins
     # Energy boundaries are rounded down. Time boundaries are rounded up. 
@@ -1424,8 +1428,8 @@ def calc_nn_sum(bicorr_hist_plot, dt_bin_edges, emin = 0.62, emax = 12, return_r
     indices = [i_min, i_max]
     
     # What are the energy bin limits that correspond to the bins?
-    emin_real = convert_time_to_energy(dt_bin_edges[i_min])
-    emax_real = convert_time_to_energy(dt_bin_edges[i_max])
+    emin_real = bicorr_math.convert_time_to_energy(dt_bin_edges[i_min])
+    emax_real = bicorr_math.convert_time_to_energy(dt_bin_edges[i_max])
     energies_real = [emin_real,emax_real]
     
     nn_sum = np.sum(bicorr_hist_plot[i_min:i_max, i_min:i_max])
@@ -1530,8 +1534,8 @@ def calc_n_sum_br(singles_hist, dt_bin_edges_sh, det_i, emin=0.62, emax=12):
     """
     # Calculate time window indices
     # Positive time range
-    tmin = convert_energy_to_time(emax)
-    tmax = convert_energy_to_time(emin)
+    tmin = bicorr_math.convert_energy_to_time(emax)
+    tmax = bicorr_math.convert_energy_to_time(emin)
     i_min = np.min(np.argwhere(tmin<dt_bin_edges_sh))
     i_max = np.min(np.argwhere(tmax<dt_bin_edges_sh))
     # Negative time range
@@ -1550,92 +1554,3 @@ def calc_n_sum_br(singles_hist, dt_bin_edges_sh, det_i, emin=0.62, emax=12):
     
         
     
-####### MAIN ###########################
-def main(folder_start = 1,folder_end = 2, option = [1,2]):
-    """
-    NOTE: For now only build bicorr#, don't build bicorr_hist_master
-    
-    Main function to run. Can be called within interactive session or directly from command land.
-    
-	If I call this `.py` file directly (not from an interactive session), it will run all steps in the bicorr process for the folders specified. It will produce a bicorr# file in each folder and a bicorr_hist_master .npy array in the main folder.
-    
-    Syntax: "python bicorr.py" OR "python bicorr.py folder_start folder_end"
-    Default is to only run folder 1   
-
-
-    
-    Parameters
-    ----------
-    folder_start : int, optional
-
-        Folder to start with
-    folder_end : int, optional
-        Folder to end at (don't run this one)
-    option : ndarray, optional
-        Which step(s) in the analysis to run?
-        
-    Returns
-    -------
-    n/a
-    """    
-    if 1 in option:
-        print('********* Generate bicorr from cced files *********')
-        generate_bicorr(folder_start,folder_end)
-    if 2 in option:
-        print('********* Build bhm: Positive time range **********')
-        build_bhm(folder_start,folder_end,dt_bin_edges = np.arange(0.0,200.25,0.25))
-        print('********* Build bhm: Negative time range **********')
-        build_bhm(folder_start,folder_end,dt_bin_edges = np.arange(-200.0,0.25,0.25),sparse_filename = 'sparse_bhm_neg')
-    if 3 in option:
-        print('********* Build singles_hist **************')
-        generate_singles_hist(folder_start,folder_end)
-    if 4 in option:
-        print('********* Build bhm_e *********************')
-        build_bhm_e(folder_start,folder_end)
-        
-if __name__ == "__main__":
-    """
-    Calls main()
-    
-    Parameters
-    ----------
-    folder_start : int, optional
-        Folder to start with
-    folder_end : int, optional
-        Folder to end at (don't run this one)
-    option_code : int, optional
-        Which options to include? Write all as one integer. Ex: option = [1,2] corresponds to option_code = 12
-        1: generate_bicorr
-        2: build_bhm pos and neg, store sparse_bhm
-        3: generate_singles_hist, store singles_hist.npz
-        4: generate bhm_e
-        Default: Run everything
-    
-	"""
-    # print(len(sys.argv))
-    
-    if len(sys.argv) == 3:
-        folder_start = int(sys.argv[1])
-        folder_end   = int(sys.argv[2])
-
-        option = [1,2,3]
-        
-        print('folder_start = ', folder_start)
-        print('folder_end = ', folder_end)
-        
-        main(folder_start,folder_end,option)
-        
-    elif len(sys.argv) == 4:
-        folder_start = int(sys.argv[1])
-        folder_end   = int(sys.argv[2])
-        option_code  = int(sys.argv[3]); option = [int(i) for i in str(option_code)]
-        
-        print('folder_start = ', folder_start)
-        print('folder_end = ', folder_end)
-        print('option = ', option)
-        
-        main(folder_start,folder_end,option)    
-        
-    else:
-
-        main()

@@ -1,20 +1,20 @@
 # A few convenient math functions for the bicorr project
 
+import matplotlib
+#matplotlib.use('agg') # for flux
+import matplotlib.pyplot as plt
+import seaborn as sns
+sns.set(style='ticks')
+
+import sys
 import os
 import os.path
+import scipy.io as sio
+
 import time
 import numpy as np
 np.set_printoptions(threshold=np.nan) # print entire matrices
 import pandas as pd
-import scipy.io as sio
-import sys
-import matplotlib
-import seaborn as sns
-sns.set(style='ticks')
-
-#matplotlib.use('agg') # for flux
-import matplotlib.pyplot as plt
-import time
 from tqdm import *
 
 # Don't import any bicorr modules here
@@ -45,7 +45,7 @@ def calc_centers(edges):
     """
     return (edges[:-1]+edges[1:])/2
 
-def calc_histogram_mean(bin_edges, counts, print_flag = False):
+def calc_histogram_mean(bin_edges, counts, print_flag = False, bin_centers_flag = False):
     """
     Calculate mean of a count rate distribution, counts vs. x. 
     Errors are calculated under the assumption that you are working
@@ -59,13 +59,18 @@ def calc_histogram_mean(bin_edges, counts, print_flag = False):
         Bin counts
     print_flag : bool
         Option to print intermediate values
+    bin_centers_flag : bool
+        Option to provide bin centers instead of bin edges (useful for 2d histograms)
     
     Returns
     -------
     x_mean : float
     x_mean_err : float
     """
-    bin_centers = calc_centers(bin_edges)
+    if bin_centers_flag == True:
+        bin_centers = bin_edges
+    else: 
+        bin_centers = calc_centers(bin_edges)
     
     num = np.sum(np.multiply(bin_centers,counts))  
     num_err = np.sqrt(np.sum(np.multiply(bin_centers**2,counts)))

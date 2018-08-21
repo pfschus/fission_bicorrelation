@@ -7,24 +7,24 @@ Changelog:
 2018_03_15: Move a few functions here
 """
 
+import matplotlib
+#matplotlib.use('agg') # for flux
+import matplotlib.pyplot as plt
+from matplotlib import rcParams
+from matplotlib.pyplot import cm 
+from matplotlib.ticker import (MultipleLocator, FormatStrFormatter, AutoMinorLocator)
+import seaborn as sns
+sns.set(style='ticks')
+
+import sys
 import os
 import os.path
+import scipy.io as sio
+
 import time
 import numpy as np
 np.set_printoptions(threshold=np.nan) # print entire matrices
 import pandas as pd
-import scipy.io as sio
-import sys
-import matplotlib
-from matplotlib.pyplot import cm 
-import seaborn as sns
-sns.set(style='ticks')
-
-from matplotlib import rcParams
-
-#matplotlib.use('agg') # for flux
-import matplotlib.pyplot as plt
-import time
 from tqdm import *
 
 # Don't import any bicorr modules here
@@ -152,14 +152,15 @@ def plot_det_df(det_df, which = ['index','angle'], cmap='viridis', title_flag = 
     if 'index' in which:
         # Detector pair indices
         plt.figure(figsize=(4,4))
-        plt.scatter(det_df['d1'],det_df['d2'],s=13,marker='s',edgecolor='none',c=det_df.index.values,cmap=cmap)
-        plt.grid(True, which='both')
+        ax = plt.gca()
+        sc = ax.scatter(det_df['d1'],det_df['d2'],s=13,marker='s',edgecolor='none',c=det_df.index.values,cmap=cmap)
+        ax.grid(True, which='both')
         plt.xlim([0,48]); plt.ylim([0,48])
         plt.xlabel('Detector 1 channel'); plt.ylabel('Detector 2 channel')
-        cbar = plt.colorbar(fraction = 0.043, pad=0.1)
+        cbar =plt.colorbar(sc, fraction = 0.043, pad=0.1)
         cbar.set_label('Detector pair index value')
         if title_flag: plt.title('Detector pair indices\n')
-        plt.axes().set_aspect('equal')
+        ax.set_aspect('equal')
         if save_flag: save_fig_to_folder('det_df_ch_to_index',fig_folder=fig_folder) 
         if show_flag: plt.show()
         if clear_flag: plt.clf()
@@ -167,13 +168,14 @@ def plot_det_df(det_df, which = ['index','angle'], cmap='viridis', title_flag = 
     if 'angle' in which:
         # Detector pair angles
         plt.figure(figsize=(4,4))
-        plt.scatter(det_df['d1'],det_df['d2'],c=det_df['angle'],s=18,marker='s',edgecolor='none',cmap=cmap)
+        ax = plt.gca()
+        sc = ax.scatter(det_df['d1'],det_df['d2'],c=det_df['angle'],s=18,marker='s',edgecolor='none',cmap=cmap)
         plt.xlim([0,48]); plt.ylim([0,48])
         plt.xlabel('Detector 1 channel'); plt.ylabel('Detector 2 channel')
-        cbar = plt.colorbar(fraction = 0.043, pad=0.1)
+        cbar = plt.colorbar(sc,fraction = 0.043, pad=0.1)
         cbar.set_label('Angle (degrees)')
         if title_flag: plt.title('Angle between all detector pairs (degrees)\n')
-        plt.axes().set_aspect('equal')
+        ax.set_aspect('equal')
         if save_flag: save_fig_to_folder('det_df_ch_to_angle',fig_folder=fig_folder) 
         if show_flag: plt.show()
         if clear_flag: plt.clf()
@@ -280,8 +282,45 @@ def plot_singles_hist(singles_hist,dt_bin_edges,
     if show_flag: plt.show()
     plt.clf()
 
+def plot_singles_hist_e_n(singles_hist_e_n,e_bin_edges,
+                      save_flag = False, fig_folder ='fig',
+                      show_flag = False, clear_flag = True):
+    """
+    Plot singles TOF distribution from singles_hist for all channels.    
+    Future development option: incorporate a channel rather than summing across all.
+    
+    Parameters
+    ----------
+    singles_hist_e_n : ndarray
+        Histogram of singles timing information
+        Dimension 0: particle type, 0=n, 1=g
+        Dimension 1: detector channel
+        Dimension 2: dt bin
+    e_bin_edges : ndarray
+        Time bin edges array
+    save_flag : bool, optional
+        save plots to file
+    fig_folder : str, optional
+        where to save plots
+    show_flag : bool, optional
+        display plots
+        
+    Returns
+    -------
+    n/a
+    """    
+    plt.figure(figsize=(4,3))
+    e_bin_centers = (e_bin_edges[:-1]+e_bin_edges[1:])/2
+    plt.plot(e_bin_centers, np.sum(singles_hist_e_n[:,:],axis=(0)))
+    plt.xlabel('Energy (MeV)')  
+    plt.ylabel('Number of events')
+    plt.title('Singles energy distribution, all channels')
+    plt.yscale('log')
+    if save_flag: save_fig_to_folder('singles_e_dist',fig_folder)
+    if show_flag: plt.show()
+    if clear_flag: plt.clf()
 
-def Sd_vs_angle_all(singles_df, show_flag = True, save_flag = True, 
+def Sd_vs_ch_all(singles_df, show_flag = True, save_flag = True, 
                     fig_folder = 'fig', normalized = False):
     """
     Generate plots of counts vs. angle for all pairs separately
@@ -313,7 +352,7 @@ def Sd_vs_angle_all(singles_df, show_flag = True, save_flag = True,
 def bhp_plot(bicorr_hist_plot, dt_bin_edges, title = None,
                 vmin = None, vmax = None,
                 save_flag = False, save_filename = 'bicorr', 
-                save_folder = 'fig', extensions = ['png'],
+                save_folder = 'fig', extensions = ['png','pdf'],
                 show_flag = False, clear = True):
     """
     Creates 2d bicorr hist plot
@@ -346,29 +385,138 @@ def bhp_plot(bicorr_hist_plot, dt_bin_edges, title = None,
     -------
     none
     """
-    plt.figure(figsize=[4,4])
-    plt.pcolormesh(dt_bin_edges, dt_bin_edges, bicorr_hist_plot.T, norm=matplotlib.colors.LogNorm(), vmin = vmin, vmax = vmax, cmap="jet")
-    cbar = plt.colorbar(fraction = 0.043, pad=0.1)
+    fig = plt.figure(figsize=[4,3])
+    ax = plt.gca()
+    mesh = ax.pcolormesh(dt_bin_edges, dt_bin_edges, bicorr_hist_plot.T, 
+                         norm=matplotlib.colors.LogNorm(), 
+                         vmin = vmin, vmax = vmax, cmap="viridis")
+    cbar = plt.colorbar(mesh, ax=ax, fraction = 0.043, pad=0.1)
     if np.max(bicorr_hist_plot) >=1: # absolute counts
         cbar.set_label('counts')
     else: # normalized
         cbar.set_label('counts / (fission$\cdot$ns$^2$$\cdot$pair)')
-    plt.xlabel('$\Delta t_1$ (ns)')
-    plt.ylabel('$\Delta t_2$ (ns)')
-    if title is not None: plt.title(title)
-    plt.axes().set_aspect('equal')
-    sns.despine(right=False)
+    ax.set_xlabel('$\Delta t_1$ (ns)')
+    ax.set_ylabel('$\Delta t_2$ (ns)')
+    
+    # Set up ticks
+    ax.tick_params(axis='both',
+                   which='major',
+                   direction='inout',
+                   length=6,
+                   color='k',
+                   bottom=True, right=True, top=True, left=True)
+    ax.tick_params(axis='both',
+                   which='minor',
+                   direction='in',
+                   length=3,
+                   bottom=True, right=True, top=True, left=True)
+    # Major
+    ax.xaxis.set_major_locator(MultipleLocator(50))
+    ax.yaxis.set_major_locator(MultipleLocator(50))
+    # Minor
+    ax.xaxis.set_minor_locator(MultipleLocator(10))
+    ax.yaxis.set_minor_locator(MultipleLocator(10))
+    
+    if title is not None: ax.set_title(title)
+    ax.set_aspect('equal')
+    plt.tight_layout()
     if save_flag: save_fig_to_folder(save_filename, save_folder, extensions)
     if show_flag: plt.show()
     if clear: plt.clf()
+    return ax
             
             
-            
+########################## BHP_E #########################
+
+def bhp_e_plot(bhp_e, e_bin_edges, title = None,
+                vmin = None, vmax = None, zoom_range = None,
+                save_flag = False, save_filename = 'bicorr_e', 
+                save_folder = 'fig', extensions = ['png','pdf'],
+                show_flag = False, clear_flag = True):
+    """
+    Creates 2d bicorr_e hist plot
+    
+    Parameters
+    ----------
+    bhm_e : ndarray
+        Master histogram of bicorrelation events in energy space. 
+        Dimension 0: detector pair, use dictionary 'dict_pair_to_index', where pair is (100*det1ch+det2ch)
+        Dimension 1: interaction type, length 1. Only storing 0=nn.
+        Dimension 2: e bin for detector 1
+        Dimension 3: e bin for detector 2
+    e_bin_edges : ndarray
+        One-dimensional array of energy bin edges
+    title : str, optional
+    vmin : float, optional
+        Minimum of colorbar range
+    vmax : float, optional
+        Maximum of colorbar range
+    zoom_range : list, optional
+        Range of x and y axes. Ex: [0,6] for 0 to 6 MeV
+    save_flag : bool, optional
+        Do you want to save to disk using function save_fig_to_folder
+    save_filename : str, optional
+        Filename for bicorrelation image (.png will be added)
+    save_folder : str, optional
+        Destination folder location for storing bicorrelation image
+    extensions: str, optional
+        File save format. If several, produce all.
+    show_flag : bool, optional   
+        Display plot to current session with plt.show()
+    clear_flag : bool, optional
+        Clear matplotlib after creating bicorr plot. (If set to False, you can add more plots before showing, saving, or clearing the figure)
+    
+    Returns
+    -------
+    none
+    """
+    fig = plt.figure(figsize=[4,3])
+    ax  = plt.gca()
+    mesh = plt.pcolormesh(e_bin_edges, e_bin_edges, bhp_e.T, 
+                   norm=matplotlib.colors.LogNorm(), 
+                   vmin = vmin, vmax = vmax, cmap="inferno")
+    cbar = plt.colorbar(mesh, ax=ax, fraction = 0.043, pad=0.1)
+    if np.max(bhp_e) >=1: # absolute counts
+        cbar.set_label('counts')
+    else: # normalized
+        cbar.set_label('counts / (fission$\cdot$MeV$^2$$\cdot$pair)')
+    ax.set_xlabel('$E_1$ (MeV)')
+    ax.set_ylabel('$E_2$ (MeV)')
+    if title is not None: plt.title(title)
+    if zoom_range is not None:
+        ax.set_xlim(zoom_range)
+        ax.set_ylim(zoom_range)
+    ax.set_aspect('equal')
+    
+    # Set up ticks
+    ax.tick_params(axis='both',
+                   which='major',
+                   direction='inout',
+                   length=6,
+                   color='k',
+                   bottom=True, right=True, top=True, left=True)
+    ax.tick_params(axis='both',
+                   which='minor',
+                   direction='in',
+                   length=3,
+                   bottom=True, right=True, top=True, left=True)
+    # Major
+    ax.xaxis.set_major_locator(MultipleLocator(1))
+    ax.yaxis.set_major_locator(MultipleLocator(1))
+    # Minor
+    ax.xaxis.set_minor_locator(MultipleLocator(.2))
+    ax.yaxis.set_minor_locator(MultipleLocator(.2))
+    
+    plt.tight_layout()
+    if save_flag: save_fig_to_folder(save_filename, save_folder, extensions)
+    if show_flag: plt.show()
+    if clear_flag: plt.clf()            
+    return ax
             
             
 ############# COUNTS VS. ANGLE #################################
 def counts_vs_angle_all(det_df, show_flag = True, save_flag = True, 
-                    fig_folder = 'fig', normalized = False):
+                    fig_folder = 'fig', normalized = False, t_flag=False):
     """
     Generate plots of counts vs. angle for all pairs separately
     
@@ -383,37 +531,38 @@ def counts_vs_angle_all(det_df, show_flag = True, save_flag = True,
     -------
     n/a
     """
-    # Positive counts vs. angle
-    plt.figure(figsize=(4,3))
-    plt.errorbar(det_df['angle'],det_df['Cp'],yerr=det_df['Cp']**.5,
-                 fmt='.',markersize=5,elinewidth=.5,color='k')
-    plt.xlabel('Angle (degrees)')
-    plt.ylabel('Cp (counts)')
-    plt.title('positive $nn$ sum')
-    sns.despine(right=False)
-    if save_flag: save_fig_to_folder('Cp_vs_angle_raw',fig_folder,extensions=['png','pdf'])
-    if show_flag: plt.show()
-    plt.clf()    
+    if t_flag:
+        # Positive counts vs. angle
+        plt.figure(figsize=(4,3))
+        plt.errorbar(det_df['angle'],det_df['Cp'],yerr=det_df['Cp']**.5,
+                     fmt='.',markersize=5,elinewidth=.5,color='k')
+        plt.xlabel('Angle (degrees)')
+        plt.ylabel('Cp (counts)')
+        plt.title('positive $nn$ sum')
+        sns.despine(right=False)
+        if save_flag: save_fig_to_folder('Cp_vs_angle_raw',fig_folder,extensions=['png','pdf'])
+        if show_flag: plt.show()
+        plt.clf()    
+        
+        # Negative counts vs. angle
+        plt.figure(figsize=(4,3))
+        plt.errorbar(det_df['angle'],det_df['Cn'],yerr=det_df['Cn']**.5,
+                     fmt='.',markersize=5,elinewidth=.5,color='k')
+        plt.xlabel('Angle (degrees)')
+        plt.ylabel('Cn (counts)')
+        plt.title('negative $nn$ sum')
+        sns.despine(right=False)
+        if save_flag: save_fig_to_folder('Cn_vs_angle_raw',fig_folder,extensions=['png','pdf'])
+        if show_flag: plt.show()
+        plt.clf()   
     
-    # Negative counts vs. angle
-    plt.figure(figsize=(4,3))
-    plt.errorbar(det_df['angle'],det_df['Cn'],yerr=det_df['Cn']**.5,
-                 fmt='.',markersize=5,elinewidth=.5,color='k')
-    plt.xlabel('Angle (degrees)')
-    plt.ylabel('Cn (counts)')
-    plt.title('negative $nn$ sum')
-    sns.despine(right=False)
-    if save_flag: save_fig_to_folder('Cn_vs_angle_raw',fig_folder,extensions=['png','pdf'])
-    if show_flag: plt.show()
-    plt.clf()   
-    
-    # Negative counts vs. angle
+    # Diff counts vs. angle
     plt.figure(figsize=(4,3))
     plt.errorbar(det_df['angle'],det_df['Cd'],yerr=det_df['Cd_err'],
                  fmt='.',markersize=5,elinewidth=.5,color='k')
     plt.xlabel('Angle (degrees)')
     plt.ylabel('Cd (counts)')
-    plt.title('br-subtracted $nn$ sum')
+    plt.title('$nn$ sum')
     sns.despine(right=False)
     if save_flag: save_fig_to_folder('Cd_vs_angle_raw',fig_folder,extensions=['png','pdf'])
     if show_flag: plt.show()
@@ -454,7 +603,7 @@ def W_vs_angle_all(det_df, show_flag = True, save_flag = True, clf_flag = True,
     plt.xlabel('Angle (degrees)')
     plt.ylabel('W (relative doubles counts)')
     sns.despine(right=False)
-    if save_flag: save_fig_to_folder('W_vs_angle_all',fig_folder,extensions=['png','pdf'])
+    if save_flag: save_fig_to_folder('W_vs_angle',fig_folder,extensions=['png','pdf'])
     if show_flag: plt.show()
     if clf_flag: plt.clf()    
     
@@ -560,6 +709,7 @@ def plot_bhp_slice(bhp_slice, bin_edges, bin_units = 'time',
     """
        
     if new_fig: plt.figure(figsize=(4,4))
+    ax = plt.gca()
     
     if norm_range is not None:
         imin = np.digitize(norm_range[0],bin_edges)-1
@@ -570,29 +720,47 @@ def plot_bhp_slice(bhp_slice, bin_edges, bin_units = 'time',
     
     if normalized is 'max':  
         step_plot(bin_edges, bhp_slice/np.max(bhp_slice[imin:imax]), linewidth=.5, color = c)
-        plt.ylabel('Counts normalized by maximum')
+        ax.set_ylabel('Counts normalized by maximum')
     elif normalized is 'int': 
         step_plot(bin_edges, bhp_slice/np.sum(bhp_slice[imin:imax]), linewidth=.5, color = c)
-        plt.ylabel('Counts normalized by integral')
+        ax.set_ylabel('Counts normalized by integral')
     else: 
         step_plot(bin_edges, bhp_slice, linewidth=.5)
-        plt.plot(calc_centers(bin_edges),bhp_slice,'.-',markersize=msize,linewidth = .5, color = c)
-        plt.ylabel('Counts')
+        ax.plot(calc_centers(bin_edges),bhp_slice,'.-',markersize=msize,linewidth = .5, color = c)
+        ax.set_ylabel('Counts')
     
-    if bin_units is 'time': plt.xlabel('$\Delta t_i$')
-    elif bin_units is 'energy': plt.xlabel('$\Delta E_i$')
+    if bin_units is 'time': ax.set_xlabel('$\Delta t_i$')
+    elif bin_units is 'energy': ax.set_xlabel('$\Delta E_i$')
     
     if title is True: # Make a title according to slice_range
         if type(slice_range) is list: # Min and max boundaries
-            plt.title('$\Delta t_j$ = {} to {}'.format(slice_range[0],slice_range[1]))
+            ax.set_title('$\Delta t_j$ = {} to {}'.format(slice_range[0],slice_range[1]))
         else: # float
-            plt.title('$\Delta t_j$ = {}'.format(slice_range))
+            ax.set_title('$\Delta t_j$ = {}'.format(slice_range))
     elif title is False:
         pass
     elif title is not None: # print custom title
-        plt.title(title)
-    
-    sns.despine(right=False)
+        ax.set_title(title)
+        
+    # Set up ticks
+    ax.tick_params(axis='both',
+                   which='major',
+                   direction='inout',
+                   length=6,
+                   color='k',
+                   bottom=True, right=True, top=True, left=True)
+    ax.tick_params(axis='both',
+                   which='minor',
+                   direction='in',
+                   length=3,
+                   bottom=True, right=True, top=True, left=True)
+    # Major
+    ax.xaxis.set_major_locator(MultipleLocator(50))
+    ax.yaxis.set_major_locator(MultipleLocator(50))
+    # Minor
+    ax.xaxis.set_minor_locator(MultipleLocator(10))
+    ax.yaxis.set_minor_locator(MultipleLocator(10))
+
     # plt.axes().set_aspect('equal')
     if save_flag: save_fig_to_folder(save_filename, save_folder, extensions)
     if show_flag: plt.show()
@@ -648,3 +816,191 @@ def plot_bhp_slices(bhp_slices,bin_edges,bin_units='time',slice_range = None,new
 
     return legend_text
     
+    
+    
+######################### SLICES IN ENERGY ############################
+def plot_bhp_e_slice(bhp_e_slice, e_bin_edges, 
+                   slice_e_range = None, normalized = None,
+                   c = 'k', title = True, show_flag = False,
+                   save_flag = False, save_filename = 'bhp_e_slice', save_folder = 'fig', new_fig = True, clear = True, msize=5,
+                   norm_range = None):
+    """
+    Plot bhp slice.
+    
+    Parameters
+    ----------
+    bhp_e_slice : ndarray
+        Slice through bhp_e at delta_E_min, produce with slice_bhp_e()
+    e_bin_edges : ndarray
+        One-dimensional array of bin edges
+    slice_e_range : array or float, optional
+        Range of time or energy values over which slice was taken. Primarily used for creating a title or legend
+        if None: not provided
+        if array: Min and max of slice range, ex: [slice_dt_min, slice_dt_max]
+        if float: Slice position, ex: slice_dt_middle
+    normalized : str, optional
+        None: Don't normalize
+        'int': Normalize by integral
+        'max': Normalize by height
+    c : str, optional
+        Color of step plot
+    title : str, optional
+        Title for plot. Ex: '$E_j$ = {}'.format(e_bin_centers[i])
+        if default True, print according to slice_e_range
+        if None, no title printed
+        if a str, use custom title
+    show_flag : bool
+        Option to show figure
+    save_flag : bool
+        Option to save figure to file
+    save_filename : str
+        filename where to save figure
+    save_folder : str
+        foldername where to save figure  
+    new_fig : bool, optional
+        option to open new fig (if False, plots on existing axes)
+    clear : bool, optional
+        Clear matplotlib after creating bicorr plot. (If set to False, you can add more plots before showing, saving, or clearing the figure)   
+    msize : int, optional
+        Marker size
+    norm_range : list of floats, optional
+        Range of bin edges for normalization. Ex [15,150]
+    
+    Returns
+    -------
+    n/a
+    """
+       
+    if new_fig: plt.figure(figsize=(6,4))
+    
+    if norm_range is not None:
+        imin = np.digitize(norm_range[0],e_bin_edges)-1
+        imax = np.digitize(norm_range[1],e_bin_edges)-1  
+    else:
+        imin = 0
+        imax = len(e_bin_edges)
+    
+    if normalized is 'max':  
+        step_plot(e_bin_edges, bhp_e_slice/np.max(bhp_e_slice[imin:imax]), linewidth=.5, color = c)
+        plt.ylabel('Counts normalized by maximum')
+    elif normalized is 'int': 
+        step_plot(e_bin_edges, bhp_e_slice/np.sum(bhp_e_slice[imin:imax]), linewidth=.5, color = c)
+        plt.ylabel('Counts normalized by integral')
+    else: 
+        step_plot(e_bin_edges, bhp_e_slice, linewidth=.5)
+        plt.ylabel('Counts')
+    
+    plt.xlabel('$\Delta E_i$')
+    
+    if title is True: # Make a title according to slice_range
+        if type(slice_e_range) is list: # Min and max boundaries
+            plt.title('$E_j$ = {} to {}'.format(slice_e_range[0],slice_e_range[1]))
+        else: # float
+            plt.title('$E_j$ = {}'.format(slice_e_range))
+    elif title is False:
+        pass
+    else: # print custom title
+        plt.title(title)
+    
+    sns.despine(right=False)
+    # plt.axes().set_aspect('equal')
+    if save_flag: save_fig_to_folder(save_filename, save_folder, extensions)
+    if show_flag: plt.show()
+    if clear: plt.clf()
+
+def plot_bhp_e_slices(bhp_e_slices,e_bin_edges,slice_e_ranges = None,
+                      E_min = None, E_max = None, title = None,
+                      new_fig=True,show_flag=True,
+                      log_flag = False, clear = False,
+                      save_flag = True, save_filename = 'bhp_e_slices'):
+    '''
+    Plot bhp_slices on same axes, normalized by integral
+    
+    Parameters
+    ----------
+    bhp_e_slices : ndarray
+        Array of bhp_e slices. Dimensions: # slices x len(e_bin_centers)    
+    e_bin_edges : ndarray
+        One-dimensional array of bin edges
+    slice_e_ranges : ndarray
+        Array of slice ranges. Dimensions: # slices x 2 (min, max)
+    new_fig : bool, optional
+        Option to start new figure
+    show_flag : bool, optional
+        Option to display
+    log_flag : bool, optional
+        Option for log y-axis
+    clear : bool, optional
+        Option to clear axes
+    
+    Returns
+    -------
+    legend_text : str
+        String of legend text
+    '''
+    if new_fig: plt.figure(figsize=(6,4))
+    legend_text = []    
+    
+    color = iter(cm.rainbow(np.linspace(0,1,bhp_e_slices.shape[0]))) # Set up colors for plotting
+    
+    for i in range(bhp_e_slices.shape[0]): # Loop through slices
+        c = next(color);         
+        plot_bhp_e_slice(bhp_e_slices[i,:],e_bin_edges,slice_e_ranges[i,:],normalized='int',c=c,clear=False,new_fig=False,title=False)
+        if slice_e_ranges[i,:] is not None: legend_text.append('{:04.2f} to {:04.2f}'.format(np.min(slice_e_ranges[i,:]),np.max(slice_e_ranges[i,:])))
+        
+    if E_min is not None: plt.axvline(E_min, c='r')
+    if E_max is not None: plt.axvline(E_max, c='r')
+        
+    plt.legend(legend_text)
+    if title is not None: plt.title(title)
+    
+    # Hack legend       
+    ax = plt.gca()
+    leg = ax.get_legend()
+    color = iter(cm.rainbow(np.linspace(0,1,bhp_e_slices.shape[0]))) # Reset colors
+    for i in range(bhp_e_slices.shape[0]): # Make legend
+        c = next(color)
+        leg.legendHandles[i].set_color(c)        
+    
+    if save_flag: save_fig_to_folder(save_filename, 'fig')
+    if show_flag: plt.show()
+    if clear: plt.clf()
+
+    return legend_text
+        
+        
+        
+def plot_Eave_vs_Ej(Eave, Eave_err, Ej, log_flag = False, title = None,
+                    y_range = None,
+                    save_flag = False, save_filename = 'Eave_vs_Ej',
+                    show_flag = True, clear = False):
+    """
+    Plot average energies as calculated from slices
+    
+    Parameters
+    ----------
+    Eave : ndarray
+        Average energies calculated
+    Eave_err : ndarray
+        1-sigma error calculated in Eave
+    Ej : ndarray
+        Dependent neutron energies    
+    y_range : list, optional
+        Two-element list for y-range on plot. 
+    
+    Returns
+    -------
+    n/a    
+    """
+    fig = plt.figure(figsize=(4,3))
+    ax = plt.gca()
+    
+    plt.errorbar(Ej, Eave, yerr=Eave_err, fmt='.')
+    plt.xlabel('$E_j$ (MeV)')
+    plt.ylabel('Average $E_i$ (MeV)')
+    if y_range is not None: plt.ylim(y_range)
+    if title is not None: plt.title(title)
+    if log_flag: plt.xscale('log')
+    if save_flag: save_fig_to_folder(save_filename, 'fig')
+    if show_flag: plt.show()
+    if clear: plt.clf()
