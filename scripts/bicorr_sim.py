@@ -28,7 +28,7 @@ import bicorr_math as bicorr_math
 
 
 ######## READ CCED -> BICORR ###########
-def generate_bicorr_sim(cced_filename,bicorr_filename):
+def generate_bicorr_sim(cced_filename,bicorr_filename,Ethresh=0.1):
     """
     Parse simulation cced file and produce bicorr output file.
     Developed in fnpc\analysis\cgmf\import_data.ipynb
@@ -42,6 +42,8 @@ def generate_bicorr_sim(cced_filename,bicorr_filename):
         Filename (including path) of cced file to parse
     bicorr_filename : str
         Filename (including path) of bicorr file to generate
+    Ethresh : float, optional
+        Pulse height threshold, MeVee
     
     Returns
     -------
@@ -74,21 +76,23 @@ def generate_bicorr_sim(cced_filename,bicorr_filename):
             n_ints = j-i
             
             if n_ints > 1: # This differs from the original
-                ccedEvent = data[i:j][:]                         # Data from this event
+                ccedEvent = data[i:j][:] # Data from this event
+                heights = ccedEvent['heights']                
+                
                 # I can skip all the dets and fc logic here  
                 for d1 in range(0,len(ccedEvent)-1,1):
                     for d2 in range(d1+1,len(ccedEvent),1):
-                        # Only record the event if both dets <46, different channels
-                        # Note: I am removing events where there are two interactions in a single channel. This could be a thing to revisit later if I run into bugs. 
-                        if (ccedEvent[d1]['detector'] != ccedEvent[d2]['detector']):
-                            print_file.write(
-                              str(ccedEvent[0]['event']) + '  ' +
-                              str(ccedEvent[d1]['detector']) + '  ' +
-                              str(ccedEvent[d1]['particle_type']) + '  ' +
-                              str(ccedEvent[d1]['time']) + '  ' +
-                              str(ccedEvent[d2]['detector']) + '  ' +
-                              str(ccedEvent[d2]['particle_type']) + '  ' +
-                              str(ccedEvent[d2]['time']) + '\n')
+                        if np.logical_and(heights[d1]>Ethresh,heights[d2]>Ethresh):
+                            # Note: I am removing events where there are two interactions in a single channel. This could be a thing to revisit later if I run into bugs. 
+                            if (ccedEvent[d1]['detector'] != ccedEvent[d2]['detector']):
+                                print_file.write(
+                                  str(ccedEvent[0]['event']) + '  ' +
+                                  str(ccedEvent[d1]['detector']) + '  ' +
+                                  str(ccedEvent[d1]['particle_type']) + '  ' +
+                                  str(ccedEvent[d1]['time']) + '  ' +
+                                  str(ccedEvent[d2]['detector']) + '  ' +
+                                  str(ccedEvent[d2]['particle_type']) + '  ' +
+                                  str(ccedEvent[d2]['time']) + '\n')
                 
             eventNum = e
             i = l
