@@ -443,7 +443,7 @@ def load_singles_hist(filename='singles_hist.npz',filepath=None,plot_flag = Fals
     return singles_hist, dt_bin_edges, dict_det_to_index, dict_index_to_det
         
 ############### GENERATE BICORR FROM CCED ####################################
-def generate_bicorr(folder_start=1,folder_end=2,root_path=None):
+def generate_bicorr(folder_start=1,folder_end=2,root_path=None, Ethresh = 0.1):
     """
 	Parse cced files and produce bicorr output file in each folder from folder_start up to (not including) folder_end.     Developed in fnpc\analysis\2016_11_30_pfs_bicorrelation_plot\generate_bicorr_from_cced.ipynb
 		
@@ -460,6 +460,8 @@ def generate_bicorr(folder_start=1,folder_end=2,root_path=None):
         Last folder + 1 (for example, folder_end = 2 will end at folder 1)
     root_path : int, optional
         Relative path to folder where data folders exist (1, 2, 3, etc.). default = cwd
+    E_thresh : float, optional
+        Pulse height threshold (NOT INTEGRAL) in MeVee, as calibrated in cced file
     
     Returns
     ------- 
@@ -479,9 +481,6 @@ def generate_bicorr(folder_start=1,folder_end=2,root_path=None):
     
     # Detector info
     chList, fcList, detList, num_dets, num_det_pairs = build_ch_lists()
-    
-    # Hard code pulse height threshold
-    Ethres = 0.1 # keVee
 
     # Run through folders
     for folder in folders:    
