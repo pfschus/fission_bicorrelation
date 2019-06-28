@@ -10,6 +10,7 @@ import sys
 import os
 import os.path
 import scipy.io as sio
+from scipy.optimize import curve_fit
 
 import time
 import numpy as np
@@ -147,3 +148,66 @@ def convert_time_to_energy(time, distance = 1.05522):
     energy = (m_n/2)*(v/c)**2
     
     return energy
+    
+    
+def f_line(x, m, b): 
+    """
+    Line fit with equation y = mx + b
+
+    Parameters
+    ----------
+    x : array
+        x values
+    m : float
+        slope
+    b : float
+        y-intercept
+        
+    Returns
+    -------
+    y : array
+        y values
+    """
+    y = m*x + b
+    return y
+
+def fit_f_line(x, y, y_err=None, p0=None, bounds=(-np.inf,np.inf)):
+    """
+    Fit a straight line with equation y = mx + b
+    
+    Parameters
+    ----------
+    x : ndarray
+    y : ndarray
+    y_err : ndarray, optional
+    p0 : ndarra
+        Initial guess of coefficients
+    bounds : ndarray
+        Boundaries for searching for coefficients
+    
+    Returns
+    -------
+    m, m_err : float
+    b, b_err : float    
+    """
+    if y_err is None:
+        y_err = np.ones(x.size)
+    
+    # Only use dat apoints with non-zero error
+    w = np.where(y_err != 0)
+    
+    popt, pcov = curve_fit(f_line, x[w], y[w], sigma=y_err[w], p0=p0, absolute_sigma = True, bounds = bounds)
+    
+    errors = np.sqrt(np.diag(pcov))
+    
+    [m, b] = popt
+    [m_err, b_err] = errors
+   
+    return m, m_err, b, b_err
+    
+    
+    
+    
+    
+    
+    
