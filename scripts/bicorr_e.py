@@ -56,7 +56,7 @@ def build_energy_bin_edges(e_min=0,e_max=15,e_step=.025,print_flag=False):
     return e_bin_edges, num_e_bins    
 
 ############### SINGLES HIST ############################
-def build_singles_hist_both(cced_filenames, cced_path, dict_det_dist = None, plot_flag = True, fig_folder = 'fig', show_flag = False, save_flag = False):
+def build_singles_hist_both(cced_filenames, cced_path, dict_det_dist = None, plot_flag = True, fig_folder = 'fig', show_flag = False, save_flag = False, Ethresh = 0.06046):
     """
     Parse cced file and generate histogram of singles timing information. This must be used with a script, assumed folder min and folder max structure from measurements.
     
@@ -70,6 +70,10 @@ def build_singles_hist_both(cced_filenames, cced_path, dict_det_dist = None, plo
     fig_folder : str, optional
     show_flag : bool, optional
     save_flag : bool, optional
+    Ethresh : float, optional
+        Pulse height threshold, V (Experiment only. Simulation is MeVee)
+        Converting from MeVee where 0.289 Volts at 0.478 MeVee
+        Ex: 0.1 MeVee threshold * 0.289 V / 0.478 MeVee = 0.06046 V
     
     Returns
     -------
@@ -178,6 +182,7 @@ def build_singles_hist_both(cced_filenames, cced_path, dict_det_dist = None, plo
                         
                         # Store dt and particle type for each detector event
                         dt       = ccedEvent[det_indices]['time']-ccedEvent[fc_indices]['time']+time_offset
+                        heights = ccedEvent[det_indices]['height']
                         par_type = ccedEvent[det_indices]['particle_type']
                         if print_flag: pass
                         
@@ -186,21 +191,22 @@ def build_singles_hist_both(cced_filenames, cced_path, dict_det_dist = None, plo
                             if print_flag: print(d,'of:',len(dt))
                             if print_flag: print(dt[d])
                             if print_flag: print(par_type[d])
-                            t_i = int(np.floor((dt[d]-dt_min)/dt_step))
-                            t_i_check = np.logical_and(t_i>=0, t_i<num_dt_bins) # Within range?
-                            if print_flag: print('t_i:',t_i)
                             
-                            if t_i_check:
-                                singles_hist[par_type[d]-1,dict_det_to_index[dets_present[d]],t_i]+= 1
+                            if heights[d] > Ethresh: # Pulse height threshold check
+                                t_i = int(np.floor((dt[d]-dt_min)/dt_step))
+                                t_i_check = np.logical_and(t_i>=0, t_i<num_dt_bins) # Within range?
+                                if print_flag: print('t_i:',t_i)
                                 
-                              
-                            # Store to energy histogram    
-                            if np.logical_and(par_type[d] == 1,dt[d] > 0):
-                                dist = dict_det_dist[dets_present[d]]
-                                energy = bicorr_math.convert_time_to_energy(dt[d],dist)
-                                if (e_min < energy < e_max):
-                                    e_i = int(np.floor((energy-e_min)/e_step))
-                                    singles_hist_e_n[dict_det_to_index[dets_present[d]],e_i] += 1
+                                if t_i_check:
+                                    singles_hist[par_type[d]-1,dict_det_to_index[dets_present[d]],t_i]+= 1
+                                
+                                # Store to energy histogram    
+                                if np.logical_and(par_type[d] == 1,dt[d] > 0):
+                                    dist = dict_det_dist[dets_present[d]]
+                                    energy = bicorr_math.convert_time_to_energy(dt[d],dist)
+                                    if (e_min < energy < e_max):
+                                        e_i = int(np.floor((energy-e_min)/e_step))
+                                        singles_hist_e_n[dict_det_to_index[dets_present[d]],e_i] += 1
            
                                 
                 eventNum = e      # Move onto the next event
