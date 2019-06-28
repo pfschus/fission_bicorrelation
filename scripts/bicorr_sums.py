@@ -24,7 +24,7 @@ import bicorr_math as bicorr_math
 import bicorr_plot as bicorr_plot
 
 # --Calculate sums on energy histograms ------------------------------------
-def calc_n_sum_e(singles_hist_e_n, e_bin_edges, det_i, e_min=0.62, e_max=12):
+def calc_n_sum_e(singles_hist_e_n, e_bin_edges, det_i, e_min=1, e_max=4):
     """
     Calculate background-subtracted number of neutron events within a given time range in the singles histogram. Analogous to calc_nn_sum and calc_nn_sum_br for singles events.
     
@@ -63,7 +63,7 @@ def calc_n_sum_e(singles_hist_e_n, e_bin_edges, det_i, e_min=0.62, e_max=12):
     Se_err = np.sqrt(Se)        
     return Se, Se_err, e_range
     
-def calc_nn_sum_e(bhp_nn_e, e_bin_edges, e_min=0.62, e_max=12, return_real_energies_flag = False):
+def calc_nn_sum_e(bhp_nn_e, e_bin_edges, e_min=1, e_max=4, return_real_energies_flag = False):
     """
     Calculate the number of counts in a given time range after background subtraction.
     
@@ -282,6 +282,12 @@ def condense_det_df_by_angle(det_df,angle_bin_edges, C_flag=False):
     'angle_bin_max':angle_bin_edges[1:],'angle_bin_centers':angle_bin_centers})
     by_angle_df['len pair_is'] = np.nan
     by_angle_df['std_angle'] = np.nan
+    by_angle_df['Sd1'] = np.nan
+    by_angle_df['Sd1_err'] = np.nan
+    by_angle_df['Sd2'] = np.nan
+    by_angle_df['Sd2_err'] = np.nan
+    by_angle_df['Cd'] = np.nan
+    by_angle_df['Cd_err'] = np.nan
     by_angle_df['W'] = np.nan
     by_angle_df['W_err'] = np.nan
     by_angle_df['std W'] = np.nan
@@ -298,6 +304,12 @@ def condense_det_df_by_angle(det_df,angle_bin_edges, C_flag=False):
             
             by_angle_df.loc[index,'len pair_is'] = int(len(pair_is))
             by_angle_df.loc[index,'std_angle'] = np.std(det_df.loc[pair_is,'angle'])
+            by_angle_df.loc[index,'Sd1']=    np.mean(det_df.loc[pair_is,'Sd1'])
+            by_angle_df.loc[index,'Sd1_err']=np.std(det_df.loc[pair_is,'Sd1']) 
+            by_angle_df.loc[index,'Sd2']=    np.mean(det_df.loc[pair_is,'Sd2'])
+            by_angle_df.loc[index,'Sd2_err']=np.std(det_df.loc[pair_is,'Sd2']) 
+            by_angle_df.loc[index,'Cd']=    np.mean(det_df.loc[pair_is,'Cd'])
+            by_angle_df.loc[index,'Cd_err']=np.std(det_df.loc[pair_is,'Cd']) 
             by_angle_df.loc[index,'W']=    np.mean(det_df.loc[pair_is,'W'])
             by_angle_df.loc[index,'W_err']=np.sqrt(np.sum(det_df.loc[pair_is,'W_err']**2))/len(pair_is)
             by_angle_df.loc[index,'std W']=np.std(det_df.loc[pair_is,'W'])  
@@ -360,7 +372,7 @@ def perform_W_calcs(det_df,
         return singles_df, det_df, by_angle_df
         
 # ------------ ASYM CALCULATIONS -------
-def calc_Asym(by_angle_df, std_flag = True):
+def calc_Asym(by_angle_df, std_flag = True, min_flag = False):
     """
     Errors propagated from std(W), not W_err
     
@@ -372,19 +384,27 @@ def calc_Asym(by_angle_df, std_flag = True):
 
     series_180 = by_angle_df.loc[np.int(np.digitize(180,angle_bin_edges))-1]
     series_90 = by_angle_df.loc[np.int(np.digitize(90,angle_bin_edges))-1]
+    series_min = by_angle_df.loc[by_angle_df['W'].idxmin()]
     
     num = series_180['W']
     denom = series_90['W']
+    minval = series_min['W']
     if std_flag:  
         num_err = series_180['std W']
         denom_err = series_90['std W']
+        minval_err = series_min['std W']
     else:
         num_err = series_180['W_err']
         denom_err = series_90['W_err']
+        minval_err = series_min['W_err']
     
     Asym, Asym_err = bicorr_math.prop_err_division(num,num_err,denom,denom_err)
+    Asym_min, Asym_min_err = bicorr_math.prop_err_division(num,num_err,minval,minval_err)
     
-    return Asym, Asym_err
+    if min_flag:
+        return Asym, Asym_err, Asym_min, Asym_min_err
+    else:
+        return Asym, Asym_err
     
 def calc_Asym_vs_emin_energies(det_df,
                     dict_index_to_det, singles_hist_e_n, e_bin_edges_sh,
@@ -404,6 +424,8 @@ def calc_Asym_vs_emin_energies(det_df,
     Asym_df['emax_real'] = np.nan
     Asym_df['Asym'] = np.nan
     Asym_df['Asym_err'] = np.nan
+    Asym_df['Asym_min'] = np.nan
+    Asym_df['Asym_min_err'] = np.nan
     
     # Fill Asym_df
     for index, row in Asym_df.iterrows():    
@@ -412,12 +434,14 @@ def calc_Asym_vs_emin_energies(det_df,
                         e_bin_edges, 
                         bhp_nn_e, e_bin_edges, 
                         row['emin'], row['emax'], angle_bin_edges, return_real_energies_flag = True)
-        Asym, Asym_err = calc_Asym(by_angle_df)
+        Asym, Asym_err, Asym_min, Asym_min_err = calc_Asym(by_angle_df,min_flag=True)
         
         Asym_df.loc[index,'emin_real'] = energies_real[1]
         Asym_df.loc[index,'emax_real'] = energies_real[0]
         Asym_df.loc[index,'Asym'] = Asym
         Asym_df.loc[index,'Asym_err'] = Asym_err
+        Asym_df.loc[index,'Asym_min'] = Asym_min
+        Asym_df.loc[index,'Asym_min_err'] = Asym_min_err
         
     if plot_flag:
         plt.figure(figsize=(4,3))
@@ -429,6 +453,18 @@ def calc_Asym_vs_emin_energies(det_df,
         if save_flag: bicorr_plot.save_fig_to_folder('Asym_vs_emin')
         if show_flag: plt.show()
         plt.clf()
+        
+        plt.figure(figsize=(4,3))
+        plt.errorbar(Asym_df['emin'],Asym_df['Asym_min'],yerr=Asym_df['Asym_min_err'],fmt='.',color='k')
+        plt.xlabel('$E_{min}$ (MeV)')
+        plt.ylabel('$A_{sym}$')
+        # plt.title('Errors from std(W)')
+        sns.despine(right=True)
+        if save_flag: bicorr_plot.save_fig_to_folder('Asym_min_vs_emin')
+        if show_flag: plt.show()
+        plt.clf()
+        
+        
         
     return Asym_df    
     
