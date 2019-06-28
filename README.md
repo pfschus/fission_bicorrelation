@@ -1,7 +1,7 @@
 # fission_bicorrelation
 Project for investigating the angular correlation of prompt neutrons and gamma-rays emitted from fission. All of the work presented in this repository is preliminary and subject to modification or removal at any time.
 
-Our manuscript has been accepted by Physical Review C. The accepted manuscript is available [here](papers_presentations/2017_pfs_bicorr_manuscript/bicorr_resubmit_13/main_complete.pdf)
+Update: Our manuscript has been accepted by Physical Review C! Here is our accepted manuscript, [**High resolution measurement of tagged two-neutron energy and angle correlations in 252Cf(sf)**](papers_presentations/2017_pfs_bicorr_manuscript/bicorr_resubmit_13/main_complete.pdf).
 
 # Project overview
 The work presented in this repository aims to characterize the angular distribution of prmopt neutrons and gamma-rays emitted from fission. We have performed measurements and built simulation tools for investigating this on Cf-252. 
