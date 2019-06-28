@@ -32,7 +32,7 @@ from tqdm import *
 
 
 ############### SOME GENERAL FUNCTIONS TO KEEP AROUND ########################
-def save_fig_to_folder(fig_filename,fig_folder='fig',extensions=['png','pdf']):
+def save_fig_to_folder(fig_filename,fig_folder='fig',extensions=['png','pdf'],dpi=300):
     """
     Summary: Save .png of current matplotlib plot to fig_folder / fig_filename
     Code will check to make sure fig_folder exists. If not, create folder then save .png to folder
@@ -62,7 +62,7 @@ def save_fig_to_folder(fig_filename,fig_folder='fig',extensions=['png','pdf']):
         except:
             os.mkdir(fig_folder)
         for extension in extensions:
-            plt.savefig(fig_folder+'/'+fig_filename+'.'+extension,dpi=300) 
+            plt.savefig(fig_folder+'/'+fig_filename+'.'+extension,dpi=dpi) 
             
 def histogram_metrics(values, xlabel = 'x', ylabel = 'y'):
     """
