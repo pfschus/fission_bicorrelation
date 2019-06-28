@@ -77,7 +77,7 @@ def generate_bicorr_sim(cced_filename,bicorr_filename,Ethresh=0.1):
             
             if n_ints > 1: # This differs from the original
                 ccedEvent = data[i:j][:] # Data from this event
-                heights = ccedEvent['heights']                
+                heights = ccedEvent['height']                
                 
                 # I can skip all the dets and fc logic here  
                 for d1 in range(0,len(ccedEvent)-1,1):
@@ -214,7 +214,7 @@ def build_bhm_both_sim(bicorr_path, bicorr_filenames, det_df = None, dt_bin_edge
     if return_flag: return bhm, dt_bin_edges, bhm_e, e_bin_edges       
     
     
-def build_singles_hist_sim(cced_filenames, cced_path, dict_det_dist = None, plot_flag = True, fig_folder = 'fig', show_flag = False, save_flag = False):
+def build_singles_hist_sim(cced_filenames, cced_path, dict_det_dist = None, plot_flag = True, fig_folder = 'fig', show_flag = False, save_flag = False, Ethresh = 0.1):
     """
     Parse cced file and generate histogram of singles timing information.
     
@@ -228,6 +228,8 @@ def build_singles_hist_sim(cced_filenames, cced_path, dict_det_dist = None, plot
     fig_folder : str, optional
     show_flag : bool, optional
     save_flag : bool, optional
+    Ethresh : float, optional
+        Pulse height threshold
     
     Returns
     -------
@@ -292,21 +294,23 @@ def build_singles_hist_sim(cced_filenames, cced_path, dict_det_dist = None, plot
             det = event['detector']
             dt = event['time']
             par_type = event['particle_type']
-          
-            # Store time to histogram        
-            if (dt_min < dt < dt_max):
-                t_i = int(np.floor((dt-dt_min)/dt_step))
-                singles_hist[par_type-1,dict_det_to_index[det],t_i]+= 1
-            if print_flag: print('t_i:',t_i)
+            height = event['height']
+            
+            if height > Ethresh:              
+                # Store time to histogram        
+                if (dt_min < dt < dt_max):
+                    t_i = int(np.floor((dt-dt_min)/dt_step))
+                    singles_hist[par_type-1,dict_det_to_index[det],t_i]+= 1
+                if print_flag: print('t_i:',t_i)
+                        
+                # Store to histogram: energy
+                if par_type == 1: # Neutrons only
+                    dist = dict_det_dist[det]
+                    energy = bicorr_math.convert_time_to_energy(dt,dist)
                     
-            # Store to histogram: energy
-            if par_type == 1: # Neutrons only
-                dist = dict_det_dist[det]
-                energy = bicorr_math.convert_time_to_energy(dt,dist)
-                
-                if (e_min < energy < e_max):
-                    e_i = int(np.floor((energy-e_min)/e_step))
-                    singles_hist_e_n[dict_det_to_index[det],e_i] += 1
+                    if (e_min < energy < e_max):
+                        e_i = int(np.floor((energy-e_min)/e_step))
+                        singles_hist_e_n[dict_det_to_index[det],e_i] += 1
                         
             eventNum = e      # Move onto the next event
             i = l             # Current line is the first line for next event
