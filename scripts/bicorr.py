@@ -197,7 +197,7 @@ def build_dict_det_dist(file_path = '../meas_info/detector_distances.xlsx'):
 
     
 ############### CALC SINGLES RATES FROM CCED #################################
-def generate_singles_hist(folder_start=1,folder_end=2, save_flag = True, print_flag=True):
+def generate_singles_hist(folder_start=1,folder_end=2, save_flag = True, print_flag=True, Ethresh=0.06046):
     """
     Build and store singles histogram for cced# files in folders. Add the histograms together across all of the folders.
     
@@ -210,7 +210,11 @@ def generate_singles_hist(folder_start=1,folder_end=2, save_flag = True, print_f
     save_flag : bool, optional
         Save singles_hist, dt_bin_edges, and dict_det_to_index to .npz file?
     print_flag : bool, optional
-        Print status updates?        
+        Print status updates?   
+    Ethresh : float, optional
+        Pulse height threshold, V (Experiment only. Simulation is MeVee)
+        Converting from MeVee where 0.289 Volts at 0.478 MeVee
+        Ex: 0.1 MeVee threshold * 0.289 V / 0.478 MeVee = 0.06046 V
         
     Returns
     -------
@@ -240,7 +244,7 @@ def generate_singles_hist(folder_start=1,folder_end=2, save_flag = True, print_f
         cced_filename = 'cced'+str(folder)
         cced_path = str(folder)
         
-        singles_hist_folder, dt_bin_edges, dict_det_to_index =  build_singles_hist(cced_filename,cced_path,True,str(folder)+'/fig',save_flag = False)
+        singles_hist_folder, dt_bin_edges, dict_det_to_index =  build_singles_hist(cced_filename,cced_path,True,str(folder)+'/fig',save_flag = False, Ethresh=Ethresh)
         
         # Combine to existing histogram
         singles_hist += singles_hist_folder
@@ -252,7 +256,7 @@ def generate_singles_hist(folder_start=1,folder_end=2, save_flag = True, print_f
     
     return singles_hist, dt_bin_edges, dict_det_to_index
 
-def build_singles_hist(cced_filename, cced_path, plot_flag = True, fig_folder = 'fig', show_flag = False, save_flag = False):
+def build_singles_hist(cced_filename, cced_path, plot_flag = True, fig_folder = 'fig', show_flag = False, save_flag = False, Ethresh = 0.06046):
     """
     Parse cced file and generate histogram of singles timing information.
     
@@ -264,6 +268,10 @@ def build_singles_hist(cced_filename, cced_path, plot_flag = True, fig_folder = 
     fig_folder : str, optional
     show_flag : bool, optional
     save_flag : bool, optional
+    Ethresh : float, optional
+        Pulse height threshold, V (Experiment only. Simulation is MeVee)
+        Converting from MeVee where 0.289 Volts at 0.478 MeVee
+        Ex: 0.1 MeVee threshold * 0.289 V / 0.478 MeVee = 0.06046 V
     
     Returns
     -------
@@ -357,6 +365,7 @@ def build_singles_hist(cced_filename, cced_path, plot_flag = True, fig_folder = 
                     
                     # Store dt and particle type for each detector event
                     dt       = ccedEvent[det_indices]['time']-ccedEvent[fc_indices]['time']+time_offset
+                    heights  = ccedEvent[det_indices]['height']
                     par_type = ccedEvent[det_indices]['particle_type']
                     if print_flag: pass
                     
@@ -365,12 +374,15 @@ def build_singles_hist(cced_filename, cced_path, plot_flag = True, fig_folder = 
                         if print_flag: print(d,'of:',len(dt))
                         if print_flag: print(dt[d])
                         if print_flag: print(par_type[d])
-                        t_i = int(np.floor((dt[d]-dt_min)/dt_step))
-                        t_i_check = np.logical_and(t_i>=0, t_i<num_dt_bins) # Within range?
-                        if print_flag: print('t_i:',t_i)
                         
-                        if t_i_check:
-                            singles_hist[par_type[d]-1,dict_det_to_index[dets_present[d]],t_i]+= 1
+                        # Pulse height threshold
+                        if heights[d] > Ethresh:                        
+                            # Time range
+                            t_i = int(np.floor((dt[d]-dt_min)/dt_step))
+                            t_i_check = np.logical_and(t_i>=0, t_i<num_dt_bins) # Within range?
+                            if print_flag: print('t_i:',t_i)                            
+                            if t_i_check:
+                                singles_hist[par_type[d]-1,dict_det_to_index[dets_present[d]],t_i]+= 1
                             
             eventNum = e      # Move onto the next event
             i = l             # Current line is the first line for next event
@@ -425,6 +437,8 @@ def load_singles_hist(filename='singles_hist.npz',filepath=None,plot_flag = Fals
         Time bin edges array
     dict_det_to_index : dict
         Dict from detector channel number to index in singles_hist
+    dict_index_to_det : dict
+        Dict from index in singles_hist to detector channel number
     """
     if filepath is None:
         npzfile = np.load(filename)
@@ -443,7 +457,7 @@ def load_singles_hist(filename='singles_hist.npz',filepath=None,plot_flag = Fals
     return singles_hist, dt_bin_edges, dict_det_to_index, dict_index_to_det
         
 ############### GENERATE BICORR FROM CCED ####################################
-def generate_bicorr(folder_start=1,folder_end=2,root_path=None, Ethresh = 0.1):
+def generate_bicorr(folder_start=1,folder_end=2,root_path=None, Ethresh = 0.06046):
     """
 	Parse cced files and produce bicorr output file in each folder from folder_start up to (not including) folder_end.     Developed in fnpc\analysis\2016_11_30_pfs_bicorrelation_plot\generate_bicorr_from_cced.ipynb
 		
@@ -458,8 +472,10 @@ def generate_bicorr(folder_start=1,folder_end=2,root_path=None, Ethresh = 0.1):
         Last folder + 1 (for example, folder_end = 2 will end at folder 1)
     root_path : int, optional
         Relative path to folder where data folders exist (1, 2, 3, etc.). default = cwd
-    E_thresh : float, optional
-        Pulse height threshold (NOT INTEGRAL) in MeVee, as calibrated in cced file
+    Ethresh : float, optional
+        Pulse height threshold, V (Experiment only. Simulation is MeVee)
+        Converting from MeVee where 0.289 Volts at 0.478 MeVee
+        Ex: 0.1 MeVee threshold * 0.289 V / 0.478 MeVee = 0.06046 V
     
     Returns
     ------- 
