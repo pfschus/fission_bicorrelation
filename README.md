@@ -166,22 +166,42 @@ The following notebooks contain the final applied data analysis for generating t
 
 ![det_df_histogram.png](papers_presentations/2017_pfs_bicorr_manuscript/bicorr_revisions_12/det_df_histogram.png)
 
+
+[compare_Dij_sums.ipynb.ipynb](analysis/compare/compare_Dij_sums.ipynb.ipynb): Calculate the total number of experimentally detected and generated fission events for comparison across data sets. Generate LaTeX code for including in the paper manuscript. 
+
+![compare_Dij_sums.ipynb](fig/counts_table.png)
+
 [Experimental: plot_bhm_and_bhm_e.ipynb](analysis/Cf072115_to_Cf072215b/plot_bhm_and_bhm_e.ipynb): Create publication-quality figures for the experimentally measured bicorrelation time-of-flight and energy distributions.  
 [POLIMI simulations: plot_bhm_and_bhm_e.ipynb](analysis/Cf072115_to_Cf072215b/plot_bhm_and_bhm_e.ipynb): Create publication-quality figures for the POLIMI-simulated bicorrelation time-of-flight and energy distributions. 
 
-These figures are used together in two figures in the paper:
+These analyses are used together in two figures in the paper:
 
 ![bhp_paper: overall](papers_presentations/2017_pfs_bicorr_manuscript/bicorr_resubmit_13/bhm_all.png)  
 ![bhp_paper: featuring cross talk at low angles](papers_presentations/2017_pfs_bicorr_manuscript/bicorr_resubmit_13/bhm_ct.png)
 
+[compare_W_angles.ipynb](analysis/compare/compare_W_angles.ipynb): Calculate the relative bicorrelation count rate, normalized by integral. This analysis demonstrates that the POLIMI model is tilted to the left, generating more correlated pairs of neutrons at low angles. 
 
+![compare_W_angles](papers_presentations/2017_pfs_bicorr_manuscript/bicorr_resubmit_13/W_figs.png)
 
+[compare_Asym_vs_Emin.ipynb](analysis/compare/compare_Asym_vs_Emin.ipynb): Calculate the magnitude of anisotropy for each data set in a one-dimensional parameter $A_{sym}$, as a function of neutron energy threshold:
 
+$A_{sym} = \frac{W(180)}{W(90)}\approx\frac{\Wth{175}}{\Wth{85}}$
 
+![compare_Asym_vs_Emin](papers_presentations/2017_pfs_bicorr_manuscript/bicorr_resubmit_13/Asym_figs.png)
 
+[compare_E_sum.ipynb](analysis/compare/compare_E_sum.ipynb): Collapse the bicorr_hist_master in energy space to calculate the average neutron energy of correlated neutron pairs vs bicorrelation angle. Compare each of the simulated data sets to the measured results. 
 
+![compare_E_sum](papers_presentations/2017_pfs_bicorr_manuscript/bicorr_resubmit_13/Esum_figs.png)
 
+[compare_E_slices.ipynb](analysis/compare/compare_E_slices.ipynb): Take slices through the bicorr_hist_master in energy to calculate the average correlated neutron energy at set detected neutron energies. 
 
+![compare_E_slices](papers_presentations/2017_pfs_bicorr_manuscript/bicorr_resubmit_13/Eave_at_2_3.png)
+
+[compare_E_slices.ipynb](analysis/compare/compare_E_slices.ipynb): Take slices through the bicorr_hist_master in energy to calculate the average correlated neutron energy at set detected neutron energies. Demonstrate that the slope of the line fit for $\bar{E_j}$ vs $E_i$ varies significantly with bicorrelation angle- a new finding that is related to whether correlated neutrons are emitted from the same or opposite fission fragments. 
+
+![compare_E_slices_1](papers_presentations/2017_pfs_bicorr_manuscript/bicorr_resubmit_13/Eave_at_2_3.png)
+
+![compare_E_slices_2](papers_presentations/2017_pfs_bicorr_manuscript/bicorr_resubmit_13/E_slope.png)
 
 
 
