@@ -185,17 +185,13 @@ These analyses are used together in two figures in the paper:
 
 [compare_Asym_vs_Emin.ipynb](analysis/compare/compare_Asym_vs_Emin.ipynb): Calculate the magnitude of anisotropy for each data set in a one-dimensional parameter $A_{sym}$, as a function of neutron energy threshold:
 
-$A_{sym} = \frac{W(180)}{W(90)}\approx\frac{\Wth{175}}{\Wth{85}}$
+![Asym_equations](fig/Asym_equations)
 
 ![compare_Asym_vs_Emin](papers_presentations/2017_pfs_bicorr_manuscript/bicorr_resubmit_13/Asym_figs.png)
 
 [compare_E_sum.ipynb](analysis/compare/compare_E_sum.ipynb): Collapse the bicorr_hist_master in energy space to calculate the average neutron energy of correlated neutron pairs vs bicorrelation angle. Compare each of the simulated data sets to the measured results. 
 
 ![compare_E_sum](papers_presentations/2017_pfs_bicorr_manuscript/bicorr_resubmit_13/Esum_figs.png)
-
-[compare_E_slices.ipynb](analysis/compare/compare_E_slices.ipynb): Take slices through the bicorr_hist_master in energy to calculate the average correlated neutron energy at set detected neutron energies. 
-
-![compare_E_slices](papers_presentations/2017_pfs_bicorr_manuscript/bicorr_resubmit_13/Eave_at_2_3.png)
 
 [compare_E_slices.ipynb](analysis/compare/compare_E_slices.ipynb): Take slices through the bicorr_hist_master in energy to calculate the average correlated neutron energy at set detected neutron energies. Demonstrate that the slope of the line fit for $\bar{E_j}$ vs $E_i$ varies significantly with bicorrelation angle- a new finding that is related to whether correlated neutrons are emitted from the same or opposite fission fragments. 
 
