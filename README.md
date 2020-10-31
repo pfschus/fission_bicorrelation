@@ -54,7 +54,22 @@ We will build analysis tools to produce this distribution for our measurements a
 
 # Analysis and visualization methods
 
-All of my functions are in the [bicorr.py](scripts/bicorr.py) file, which is extensively documented. The following Jupyter notebooks contain my work in developing those functions and demonstrating how they are used.
+All of my functions are in the [scripts](scripts/) folder and each is extensively documented. The basic functions are broken up into the following scripts:  
+
+* [bicorr.py](scripts/bicorr.py): Most of the core functions exist here, including:    
+    * Load detector configuration data, generate dictionary of detector pairs  
+    * Read raw `cced` file and generate parsed `bicorr` file  
+    * Build singles histogram and bicorr_hist_master    
+    * Generate sparse data file, unpack stored sparse data file  
+    * Calculate sum of events across given time ranges  
+* [bicorr_e.py](scripts/bicorr_e.py): Analogous functions to `bicorr.py` but working with neutron energies instead of time-of-flight  
+* [bicorr_sim.py](scripts/bicorr_sim.py): Analogous functions to `bicorr.py` adapted for simulated data  
+* [bicorr_math.py](scripts/bicorr_math.py): Supporting math functions    
+* [bicorr_plot.py](scripts/bicorr_plot.py): Supporting plotting functions  
+* [bicorr_sums.py](scripts/bicorr_sums.py): Calculating sums across the bicorrelation distribution  
+* [bicorr_main.py](scripts/bicorr_main.py): Main function for calling process from command line or on cluster    
+
+The following Jupyter notebooks contain my work in developing those functions and demonstrating how they are used.
 
 ## Parse `cced`, calculate `singles_hist`
 
@@ -155,7 +170,7 @@ The background-subtracted singles count rate will vary slightly across detectors
 
 ## Build `bicorr_hist_master` in energy space
 
-[build_bhm_with_energy.ipynb](methods/build_bhm_with_energy.ipynb): Generate a bicorrelation histogram in energy space (for nn events only).
+[build_bhm_with_energy.ipynb](methods/build_bhm_with_energy.ipynb): Generate a bicorrelation histogram in energy space (for nn events only). It turns out that we needed to generate this distribution as well in order to take slices of neutrons at given energy ranges (rather than convert from time-of-flight) in order to keep consistent binning. This method adapts the method built in time-of-flight and includes options to save in sparse format. Ultimately, the bicorr_hist_master is built vs. time-of-flight and energy during the initial data unpacking. 
 
 # Final data analysis
 
@@ -167,7 +182,7 @@ The following notebooks contain the final applied data analysis for generating t
 ![det_df_histogram.png](papers_presentations/2017_pfs_bicorr_manuscript/bicorr_revisions_12/det_df_histogram.png)
 
 
-[compare_Dij_sums.ipynb.ipynb](analysis/compare/compare_Dij_sums.ipynb.ipynb): Calculate the total number of experimentally detected and generated fission events for comparison across data sets. Generate LaTeX code for including in the paper manuscript. 
+[compare_Dij_sums.ipynb.ipynb](analysis/compare/compare_Dij_sums.ipynb): Calculate the total number of experimentally detected and generated fission events for comparison across data sets. Generate LaTeX code for including in the paper manuscript. 
 
 ![compare_Dij_sums.ipynb](fig/counts_table.png)
 
@@ -179,21 +194,20 @@ These analyses are used together in two figures in the paper:
 ![bhp_paper: overall](papers_presentations/2017_pfs_bicorr_manuscript/bicorr_resubmit_13/bhm_all.png)  
 ![bhp_paper: featuring cross talk at low angles](papers_presentations/2017_pfs_bicorr_manuscript/bicorr_resubmit_13/bhm_ct.png)
 
-[compare_W_angles.ipynb](analysis/compare/compare_W_angles.ipynb): Calculate the relative bicorrelation count rate, normalized by integral. This analysis demonstrates that the POLIMI model is tilted to the left, generating more correlated pairs of neutrons at low angles. 
+[compare_W_angles.ipynb](analysis/compare/compare_W_angles.ipynb): Calculate the relative bicorrelation count rate, normalized by integral. This analysis demonstrates that the POLIMI model is tilted to the left, generating more correlated pairs of neutrons at low angles. Formalized in the script [plot_counts_vs_angle_E.py](scripts/plot_counts_vs_angle_E.py). 
 
 ![compare_W_angles](papers_presentations/2017_pfs_bicorr_manuscript/bicorr_resubmit_13/W_figs.png)
 
-[compare_Asym_vs_Emin.ipynb](analysis/compare/compare_Asym_vs_Emin.ipynb): Calculate the magnitude of anisotropy for each data set in a one-dimensional parameter $A_{sym}$, as a function of neutron energy threshold:
+[compare_Asym_vs_Emin.ipynb](analysis/compare/compare_Asym_vs_Emin.ipynb): Calculate the magnitude of anisotropy for each data set in a one-dimensional parameter $A_{sym}$, as a function of neutron energy threshold. Formalized in the script [plot_Asym_energy_space.py](scripts/plot_Asym_energy_space.py).
 
-![Asym_equations](fig/Asym_equations.png)
-
+![Asym_equations](fig/Asym_equations.png)  
 ![compare_Asym_vs_Emin](papers_presentations/2017_pfs_bicorr_manuscript/bicorr_resubmit_13/Asym_figs.PNG)
 
-[compare_E_sum.ipynb](analysis/compare/compare_E_sum.ipynb): Collapse the bicorr_hist_master in energy space to calculate the average neutron energy of correlated neutron pairs vs bicorrelation angle. Compare each of the simulated data sets to the measured results. 
+[compare_E_sum.ipynb](analysis/compare/compare_E_sum.ipynb): Collapse the bicorr_hist_master in energy space to calculate the average neutron energy of correlated neutron pairs vs bicorrelation angle. Compare each of the simulated data sets to the measured results. Formalized in the script [plot_E_slices.py](scripts/plot_E_slices.py).
 
 ![compare_E_sum](papers_presentations/2017_pfs_bicorr_manuscript/bicorr_resubmit_13/Esum_figs.png)
 
-[compare_E_slices.ipynb](analysis/compare/compare_E_slices.ipynb): Take slices through the bicorr_hist_master in energy to calculate the average correlated neutron energy at set detected neutron energies. Demonstrate that the slope of the line fit for $\bar{E_j}$ vs $E_i$ varies significantly with bicorrelation angle- a new finding that is related to whether correlated neutrons are emitted from the same or opposite fission fragments. 
+[compare_E_slices.ipynb](analysis/compare/compare_E_slices.ipynb): Take slices through the bicorr_hist_master in energy to calculate the average correlated neutron energy at set detected neutron energies. Demonstrate that the slope of the line fit for $\bar{E_j}$ vs $E_i$ varies significantly with bicorrelation angle- a new finding that is related to whether correlated neutrons are emitted from the same or opposite fission fragments. Formalized in the script [plot_slices_bhp_e.py](scripts/plot_slices_bhp_e.py).
 
 ![compare_E_slices_1](papers_presentations/2017_pfs_bicorr_manuscript/bicorr_resubmit_13/Eave_at_2_3.png)
 
