@@ -1,6 +1,8 @@
 # fission_bicorrelation
 This repo contains all of my methods and analysis for investigating the angular correlation of prompt neutrons and gamma-rays emitted from fission. This project was concluded in a paper published in Physical Review C. 
 
+Note that the raw data is not available online because it is 33 TB in size.
+
 [Here is the paper on the Physical Review C website.](https://doi.org/10.1103/physrevc.100.014605)     
 [Here is the final pdf stored locally in this repo.](papers_presentations/2019_phys_rev_c_final.pdf).
 
@@ -8,8 +10,9 @@ This repo contains all of my methods and analysis for investigating the angular 
 
 
 
-# Project overview
-The work presented in this repository aims to characterize the angular distribution of prmopt neutrons and gamma-rays emitted from fission. We have performed measurements and built simulation tools for investigating this on Cf-252. 
+# Measurement overview and project purpose  
+
+The work presented in this repository aims to characterize the angular distribution of prompt neutrons and gamma-rays emitted from fission. We have performed measurements and built simulation tools for investigating this on Cf-252. 
 
 My collaborator, Matthew Marcath, took measurements of a Cf-252 source positioned at the focal point of the Chi-Nu detector array at Los Alamos National Laboratory (LANL). A model of the detector array is shown below:
 
@@ -49,7 +52,7 @@ There are four main features observed from detecting two prompt fission emission
 
 We will build analysis tools to produce this distribution for our measurements and simulations under various conditions. 
 
-# Analysis tools
+# Analysis and visualization methods
 
 All of my functions are in the [bicorr.py](scripts/bicorr.py) file, which is extensively documented. The following Jupyter notebooks contain my work in developing those functions and demonstrating how they are used.
 
@@ -153,6 +156,32 @@ The background-subtracted singles count rate will vary slightly across detectors
 ## Build `bicorr_hist_master` in energy space
 
 [build_bhm_with_energy.ipynb](methods/build_bhm_with_energy.ipynb): Generate a bicorrelation histogram in energy space (for nn events only).
+
+# Final data analysis
+
+The following notebooks contain the final applied data analysis for generating the results published in our paper. These notebooks apply the methods described above with extensive interpretation. 
+
+
+[analysis_experimental_setup_figs.ipynb](analysis/Cf072115_to_Cf072215b/analysis_experimental_setup_figs.ipynb): Generate the distribution of detector pair angles, discretized to ten-degree bins. The final version in the paper is shown here:
+
+
+![det_df_histogram.png](papers_presentations\2017_pfs_bicorr_manuscript\bicorr_revisions_12\det_df_histogram.png)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
