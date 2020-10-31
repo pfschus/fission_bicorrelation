@@ -164,8 +164,16 @@ The following notebooks contain the final applied data analysis for generating t
 
 [analysis_experimental_setup_figs.ipynb](analysis/Cf072115_to_Cf072215b/analysis_experimental_setup_figs.ipynb): Generate the distribution of detector pair angles, discretized to ten-degree bins. The final version in the paper is shown here:
 
+![det_df_histogram.png](papers_presentations/2017_pfs_bicorr_manuscript/bicorr_revisions_12/det_df_histogram.png)
 
-![det_df_histogram.png](papers_presentations\2017_pfs_bicorr_manuscript\bicorr_revisions_12\det_df_histogram.png)
+[Experimental: plot_bhm_and_bhm_e.ipynb](analysis/Cf072115_to_Cf072215b/plot_bhm_and_bhm_e.ipynb): Create publication-quality figures for the experimentally measured bicorrelation time-of-flight and energy distributions.  
+[POLIMI simulations: plot_bhm_and_bhm_e.ipynb](analysis/Cf072115_to_Cf072215b/plot_bhm_and_bhm_e.ipynb): Create publication-quality figures for the POLIMI-simulated bicorrelation time-of-flight and energy distributions. 
+
+These figures are used together in two figures in the paper:
+
+![bhp_paper: overall](papers_presentations/2017_pfs_bicorr_manuscript/bicorr_resubmit_13/bhm_all.png)  
+![bhp_paper: featuring cross talk at low angles](papers_presentations/2017_pfs_bicorr_manuscript/bicorr_resubmit_13/bhm_ct.png)
+
 
 
 
