@@ -8,7 +8,7 @@ Note that the raw data is not available online because it is 33 TB in size.
 
 ![Publication header](fig/paper_screenshot.png)
 
-
+Disclaimer: This repo is primarily meant for tracking and sharing the scripts and analysis methods. Only a few figures are included here and almost no data is included here.
 
 # Measurement overview and project purpose  
 
