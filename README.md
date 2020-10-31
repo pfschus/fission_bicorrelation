@@ -154,7 +154,7 @@ To run:
 
 ## Calculate sum across singles histogram
 
-[singles_n_sum.ipynb](methods/singles_n_syn.ipynb): Calculate the sum across the singles time-of-flight distribution, $S_i$, for use in the singles correction. Include background subtraction based on counts in negative time range. Store count rates in a dataFrame called `singles_df`. 
+[singles_n_sum.ipynb](methods/singles_n_sum.ipynb): Calculate the sum across the singles time-of-flight distribution, $S_i$, for use in the singles correction. Include background subtraction based on counts in negative time range. Store count rates in a dataFrame called `singles_df`. 
 
 The background-subtracted singles count rate will vary slightly across detectors based on a few systematic effects, including distance from fission chamber and non-uniform attenuation of the fission chamber. 
 
@@ -194,7 +194,7 @@ These analyses are used together in two figures in the paper:
 ![bhp_paper: overall](papers_presentations/2017_pfs_bicorr_manuscript/bicorr_resubmit_13/bhm_all.png)  
 ![bhp_paper: featuring cross talk at low angles](papers_presentations/2017_pfs_bicorr_manuscript/bicorr_resubmit_13/bhm_ct.png)
 
-[compare_W_angles.ipynb](analysis/compare/compare_W_angles.ipynb): Calculate the relative bicorrelation count rate, normalized by integral. This analysis demonstrates that the POLIMI model is tilted to the left, generating more correlated pairs of neutrons at low angles. Formalized in the script [plot_counts_vs_angle_E.py](scripts/plot_counts_vs_angle_E.py). 
+[compare_W_angle.ipynb](analysis/compare/compare_W_angle.ipynb): Calculate the relative bicorrelation count rate, normalized by integral. This analysis demonstrates that the POLIMI model is tilted to the left, generating more correlated pairs of neutrons at low angles. Formalized in the script [plot_counts_vs_angle_E.py](scripts/plot_counts_vs_angle_E.py). 
 
 ![compare_W_angles](papers_presentations/2017_pfs_bicorr_manuscript/bicorr_resubmit_13/W_figs.png)
 
