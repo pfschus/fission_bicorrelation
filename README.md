@@ -185,9 +185,9 @@ These analyses are used together in two figures in the paper:
 
 [compare_Asym_vs_Emin.ipynb](analysis/compare/compare_Asym_vs_Emin.ipynb): Calculate the magnitude of anisotropy for each data set in a one-dimensional parameter $A_{sym}$, as a function of neutron energy threshold:
 
-![Asym_equations](fig/Asym_equations)
+![Asym_equations](fig/Asym_equations.png)
 
-![compare_Asym_vs_Emin](papers_presentations/2017_pfs_bicorr_manuscript/bicorr_resubmit_13/Asym_figs.png)
+![compare_Asym_vs_Emin](papers_presentations/2017_pfs_bicorr_manuscript/bicorr_resubmit_13/Asym_figs.PNG)
 
 [compare_E_sum.ipynb](analysis/compare/compare_E_sum.ipynb): Collapse the bicorr_hist_master in energy space to calculate the average neutron energy of correlated neutron pairs vs bicorrelation angle. Compare each of the simulated data sets to the measured results. 
 
